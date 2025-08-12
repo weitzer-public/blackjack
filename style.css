@@ -19,8 +19,7 @@ button {
     color: #016f32;
     width: 150px;
     background: goldenrod;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding: 5px 0;
     font-weight: bold;
     border: none;
     border-radius: 2px;
