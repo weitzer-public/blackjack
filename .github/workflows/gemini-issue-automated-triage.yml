@@ -3,8 +3,8 @@ name: '🏷️ Gemini Automated Issue Triage'
 on:
   issues:
     types:
-      - 'opened'
-      - 'reopened'
+     // - 'opened'
+    //  - 'reopened'
   issue_comment:
     types:
       - 'created'
