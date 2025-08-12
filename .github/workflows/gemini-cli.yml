@@ -188,7 +188,7 @@ jobs:
 
       - name: 'Run Gemini'
         id: 'run_gemini'
-        uses: './'
+        uses: 'google-github-actions/run-gemini-cli@v0'
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           REPOSITORY: '${{ github.repository }}'
@@ -207,7 +207,7 @@ jobs:
             {
               "maxSessionTurns": 50,
               "telemetry": {
-                "enabled": true,
+                "enabled": false,
                 "target": "gcp"
               }
             }
