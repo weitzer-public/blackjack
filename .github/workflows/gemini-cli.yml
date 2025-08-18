@@ -218,7 +218,7 @@ jobs:
               "debug": ${{ fromJSON(env.DEBUG || env.ACTIONS_STEP_DEBUG || false) }},
               "maxSessionTurns": 50,
               "telemetry": {
-                "enabled": false,
+                "enabled": true,
                 "target": "gcp"
               }
             }
