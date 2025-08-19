@@ -18,20 +18,11 @@ function renderGame(data) {
         cardsEl.textContent += data.Player[i].Value + " "
     }
 
-    let playerScore = 0;
-    for (let i = 0; i < data.Player.length; i++) {
-        if (data.Player[i].Value > 10) {
-            playerScore += 10;
-        } else {
-            playerScore += data.Player[i].Value;
-        }
-    }
+    sumEl.textContent = "Sum: " + data.PlayerScore
 
-    sumEl.textContent = "Sum: " + playerScore
-
-    if (playerScore <= 20) {
+    if (data.PlayerScore <= 20) {
         messageEl.textContent = "Do you want to draw a new card?"
-    } else if (playerScore === 21) {
+    } else if (data.PlayerScore === 21) {
         messageEl.textContent = "You've got Blackjack!"
     } else {
         messageEl.textContent = "You're out of the game!"

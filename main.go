@@ -30,6 +30,7 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 func hitHandler(w http.ResponseWriter, r *http.Request) {
 	game.Player = append(game.Player, game.Deck[0])
 	game.Deck = game.Deck[1:]
+	game.PlayerScore = HandScore(game.Player)
 	json.NewEncoder(w).Encode(game)
 }
 
@@ -39,6 +40,7 @@ func standHandler(w http.ResponseWriter, r *http.Request) {
 		game.Dealer = append(game.Dealer, game.Deck[0])
 		game.Deck = game.Deck[1:]
 	}
+	game.DealerScore = HandScore(game.Dealer)
 	json.NewEncoder(w).Encode(game)
 }
 

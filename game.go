@@ -42,9 +42,11 @@ type Hand []Card
 
 // Game represents the state of a blackjack game.
 type Game struct {
-	Deck   Deck
-	Player Hand
-	Dealer Hand
+	Deck        Deck
+	Player      Hand
+	Dealer      Hand
+	PlayerScore int
+	DealerScore int
 }
 
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
@@ -56,9 +58,11 @@ func NewGame() Game {
 	dealerHand := Hand{deck[1], deck[3]}
 
 	game := Game{
-		Deck:   deck[4:],
-		Player: playerHand,
-		Dealer: dealerHand,
+		Deck:        deck[4:],
+		Player:      playerHand,
+		Dealer:      dealerHand,
+		PlayerScore: HandScore(playerHand),
+		DealerScore: HandScore(dealerHand),
 	}
 
 	return game
