@@ -22,29 +22,9 @@ func main() {
 	}
 }
 
-func newGameHandler(w http.ResponseWriter, r *http.Request) {
-	game = NewGame()
-	visibleGame := VisibleGame{
-		Player:      game.Player,
-		Dealer:      game.Dealer,
-		PlayerScore: game.PlayerScore,
-		DealerScore: game.DealerScore,
-		State:       game.State,
-	}
-	json.NewEncoder(w).Encode(visibleGame)
-}
 
-func hitHandler(w http.ResponseWriter, r *http.Request) {
-	game.Hit()
-	visibleGame := VisibleGame{
-		Player:      game.Player,
-		Dealer:      game.Dealer,
-		PlayerScore: game.PlayerScore,
-		DealerScore: game.DealerScore,
-		State:       game.State,
-	}
-	json.NewEncoder(w).Encode(visibleGame)
-}
+
+
 
 func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	game = NewGame()
