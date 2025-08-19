@@ -48,6 +48,7 @@ type Game struct {
 	Deck        Deck
 	Player      Hand
 	Dealer      Hand
+	HiddenCard  Card
 	PlayerScore int
 	DealerScore int
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
@@ -172,11 +173,4 @@ func (g *Game) Stand() {
 	}
 }
 
-// VisibleGame represents the state of the game that is visible to the player.
-type VisibleGame struct {
-	Player      Hand   `json:"Player"`
-	Dealer      Hand   `json:"Dealer"`
-	PlayerScore int    `json:"PlayerScore"`
-	DealerScore int    `json:"DealerScore"`
-	State       string `json:"State"`
-}
+
