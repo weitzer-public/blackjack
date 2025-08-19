@@ -4,6 +4,7 @@ const cardsEl = document.getElementById("cards-el")
 const playerEl = document.getElementById("player-el")
 const startGameBtn = document.getElementById("start-game-btn")
 const newCardBtn = document.getElementById("new-card-btn")
+const standBtn = document.getElementById("stand-btn")
 
 let player = {
     name: "Per",
@@ -20,12 +21,24 @@ function renderGame(data) {
 
     sumEl.textContent = "Sum: " + data.PlayerScore
 
-    if (data.PlayerScore <= 20) {
-        messageEl.textContent = "Do you want to draw a new card?"
-    } else if (data.PlayerScore === 21) {
-        messageEl.textContent = "You've got Blackjack!"
-    } else {
-        messageEl.textContent = "You're out of the game!"
+    switch (data.State) {
+        case "playing":
+            messageEl.textContent = "Do you want to draw a new card?"
+            break;
+        case "player_wins":
+            messageEl.textContent = "You win!"
+            break;
+        case "dealer_wins":
+            messageEl.textContent = `Dealer wins with ${data.DealerScore}!`
+            break;
+        case "player_busts":
+            messageEl.textContent = "You're out of the game!"
+            break;
+        case "tie":
+            messageEl.textContent = "It's a tie!"
+            break;
+        default:
+            messageEl.textContent = "Game over."
     }
 }
 
@@ -39,6 +52,14 @@ startGameBtn.addEventListener("click", function() {
 
 newCardBtn.addEventListener("click", function() {
     fetch("/api/hit")
+        .then(response => response.json())
+        .then(data => {
+            renderGame(data)
+        })
+})
+
+standBtn.addEventListener("click", function() {
+    fetch("/api/stand")
         .then(response => response.json())
         .then(data => {
             renderGame(data)

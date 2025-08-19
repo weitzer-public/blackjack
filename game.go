@@ -47,6 +47,7 @@ type Game struct {
 	Dealer      Hand
 	PlayerScore int
 	DealerScore int
+	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
 }
 
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
@@ -57,12 +58,25 @@ func NewGame() Game {
 	playerHand := Hand{deck[0], deck[2]}
 	dealerHand := Hand{deck[1], deck[3]}
 
+	playerScore := HandScore(playerHand)
+	dealerScore := HandScore(dealerHand)
+
+	state := "playing"
+	if playerScore == 21 {
+		if dealerScore == 21 {
+			state = "tie"
+		} else {
+			state = "player_wins"
+		}
+	}
+
 	game := Game{
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
-		PlayerScore: HandScore(playerHand),
-		DealerScore: HandScore(dealerHand),
+		PlayerScore: playerScore,
+		DealerScore: dealerScore,
+		State:       state,
 	}
 
 	return game

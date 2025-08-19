@@ -28,19 +28,39 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
+	if game.State != "playing" {
+		json.NewEncoder(w).Encode(game)
+		return
+	}
 	game.Player = append(game.Player, game.Deck[0])
 	game.Deck = game.Deck[1:]
 	game.PlayerScore = HandScore(game.Player)
+	if game.PlayerScore > 21 {
+		game.State = "player_busts"
+	}
 	json.NewEncoder(w).Encode(game)
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
+	if game.State != "playing" {
+		json.NewEncoder(w).Encode(game)
+		return
+	}
 	// Dealer's turn
 	for HandScore(game.Dealer) < 17 {
 		game.Dealer = append(game.Dealer, game.Deck[0])
 		game.Deck = game.Deck[1:]
 	}
 	game.DealerScore = HandScore(game.Dealer)
+
+	if game.DealerScore > 21 || game.PlayerScore > game.DealerScore {
+		game.State = "player_wins"
+	} else if game.PlayerScore < game.DealerScore {
+		game.State = "dealer_wins"
+	} else {
+		game.State = "tie"
+	}
+
 	json.NewEncoder(w).Encode(game)
 }
 
