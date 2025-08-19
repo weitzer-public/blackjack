@@ -42,6 +42,19 @@ function renderGame() {
         cardsEl.textContent += cards[i] + " "
     }
     
+    // Adjust sum for Aces if player would otherwise bust
+    while (sum > 21 && cards.includes(11)) {
+    while (sum > 21) {
+        const aceIndex = cards.indexOf(11);
+        if (aceIndex === -1) {
+            break;
+        }
+        sum -= 10;
+        // Change Ace from 11 to 1 in the cards array to prevent re-adjusting it
+        cards[aceIndex] = 1;
+    }
+    }
+
     sumEl.textContent = "Sum: " + sum
     if (sum <= 20) {
         message = "Do you want to draw a new card?"
