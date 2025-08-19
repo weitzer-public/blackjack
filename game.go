@@ -38,7 +38,9 @@ func NewDeck() Deck {
 // Shuffle shuffles the deck.
 func (d Deck) Shuffle() {
 	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(d), func(i, j int) {
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 		d[i], d[j] = d[j], d[i]
 	})
 }
