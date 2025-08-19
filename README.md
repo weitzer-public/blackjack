@@ -44,7 +44,7 @@ This is a simple web-based Blackjack game with a Go backend and a plain HTML/CSS
 2. **Run the Docker container:**
 
    ```bash
-   docker run -p 8080:8080 blackjack
+   docker run -d --name blackjack -p 8080:8080 blackjack
    ```
 
 3. **Open the application in your browser:**
