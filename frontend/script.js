@@ -26,7 +26,7 @@ function renderGame(data) {
     dealerCardsEl.textContent = "Dealer's Cards: "
     if (data.State === "playing") {
         dealerCardsEl.textContent += data.Dealer[0].Value + " ?"
-        dealerSumEl.textContent = "Dealer's Sum: " + data.DealerScore
+        dealerSumEl.textContent = "Dealer's Sum: ?"
     } else {
         for (let i = 0; i < data.Dealer.length; i++) {
             dealerCardsEl.textContent += data.Dealer[i].Value + " "
