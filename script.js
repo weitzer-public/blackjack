@@ -44,12 +44,15 @@ function renderGame() {
     
     // Adjust sum for Aces if player would otherwise bust
     while (sum > 21 && cards.includes(11)) {
-        sum -= 10;
+    while (sum > 21) {
         const aceIndex = cards.indexOf(11);
-        // Change Ace from 11 to 1 in the cards array to prevent re-adjusting it
-        if (aceIndex > -1) {
-            cards[aceIndex] = 1;
+        if (aceIndex === -1) {
+            break;
         }
+        sum -= 10;
+        // Change Ace from 11 to 1 in the cards array to prevent re-adjusting it
+        cards[aceIndex] = 1;
+    }
     }
 
     sumEl.textContent = "Sum: " + sum
