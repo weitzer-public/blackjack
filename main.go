@@ -46,6 +46,16 @@ func hitHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(visibleGame)
 }
 
+func newGameHandler(w http.ResponseWriter, r *http.Request) {
+	game = NewGame()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func hitHandler(w http.ResponseWriter, r *http.Request) {
+	game.Hit()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
 func standHandler(w http.ResponseWriter, r *http.Request) {
 	game.Stand()
 	json.NewEncoder(w).Encode(game)

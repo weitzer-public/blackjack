@@ -48,10 +48,29 @@ type Game struct {
 	Deck        Deck
 	Player      Hand
 	Dealer      Hand
-	HiddenCard  Card
 	PlayerScore int
 	DealerScore int
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
+}
+
+// VisibleGame is the version of the Game struct that is sent to the client.
+type VisibleGame struct {
+	Player      Hand   `json:"Player"`
+	Dealer      Hand   `json:"Dealer"`
+	PlayerScore int    `json:"PlayerScore"`
+	DealerScore int    `json:"DealerScore"`
+	State       string `json:"State"`
+}
+
+// Visible returns a version of the game state that is safe to show to the client.
+func (g *Game) Visible() VisibleGame {
+	return VisibleGame{
+		Player:      g.Player,
+		Dealer:      g.Dealer[:1],
+		PlayerScore: g.PlayerScore,
+		DealerScore: HandScore(g.Dealer[:1]),
+		State:       g.State,
+	}
 }
 
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
@@ -60,33 +79,28 @@ func NewGame() Game {
 	deck.Shuffle()
 
 	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1]}
-	hiddenCard := deck[3]
+	dealerHand := Hand{deck[1], deck[3]}
 
 	playerScore := HandScore(playerHand)
 	dealerScore := HandScore(dealerHand)
 
 	state := "playing"
 	if playerScore == 21 {
-		// Dealer's full hand for blackjack check
-		if HandScore(Hand{dealerHand[0], hiddenCard}) == 21 {
+		if dealerScore == 21 {
 			state = "tie"
 		} else {
 			state = "player_wins"
 		}
 	}
 
-	game := Game{
+	return Game{
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
-		HiddenCard:  hiddenCard,
 		PlayerScore: playerScore,
 		DealerScore: dealerScore,
 		State:       state,
 	}
-
-	return game
 }
 
 // HandScore calculates the score of a hand.
