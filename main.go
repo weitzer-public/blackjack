@@ -24,7 +24,14 @@ func main() {
 
 func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	game = NewGame()
-	json.NewEncoder(w).Encode(game)
+	visibleGame := VisibleGame{
+		Player:      game.Player,
+		Dealer:      []Card{game.Dealer[0]}, // Only show one card
+		PlayerScore: game.PlayerScore,
+		DealerScore: HandScore(Hand{game.Dealer[0]}),
+		State:       game.State,
+	}
+	json.NewEncoder(w).Encode(visibleGame)
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +45,15 @@ func hitHandler(w http.ResponseWriter, r *http.Request) {
 	if game.PlayerScore > 21 {
 		game.State = "player_busts"
 	}
-	json.NewEncoder(w).Encode(game)
+
+	visibleGame := VisibleGame{
+		Player:      game.Player,
+		Dealer:      []Card{game.Dealer[0]},
+		PlayerScore: game.PlayerScore,
+		DealerScore: HandScore(Hand{game.Dealer[0]}),
+		State:       game.State,
+	}
+	json.NewEncoder(w).Encode(visibleGame)
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,4 +78,3 @@ func standHandler(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(game)
 }
-

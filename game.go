@@ -50,6 +50,16 @@ type Game struct {
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
 }
 
+// VisibleGame is the representation of the game state sent to the client.
+type VisibleGame struct {
+	Player      Hand
+	Dealer      []Card // Only one card is visible to the player
+	PlayerScore int
+	DealerScore int // Only the score of the visible card
+	State       string
+}
+
+
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
 func NewGame() Game {
 	deck := NewDeck()
@@ -59,11 +69,12 @@ func NewGame() Game {
 	dealerHand := Hand{deck[1], deck[3]}
 
 	playerScore := HandScore(playerHand)
-	dealerScore := HandScore(dealerHand)
+	// The dealer's score is initially calculated with only the visible card.
+	dealerScore := HandScore(Hand{dealerHand[0]})
 
 	state := "playing"
 	if playerScore == 21 {
-		if dealerScore == 21 {
+		if HandScore(dealerHand) == 21 {
 			state = "tie"
 		} else {
 			state = "player_wins"

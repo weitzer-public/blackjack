@@ -2,6 +2,8 @@ const messageEl = document.getElementById("message-el")
 const sumEl = document.getElementById("sum-el")
 const cardsEl = document.getElementById("cards-el")
 const playerEl = document.getElementById("player-el")
+const dealerCardsEl = document.getElementById("dealer-cards-el")
+const dealerSumEl = document.getElementById("dealer-sum-el")
 const startGameBtn = document.getElementById("start-game-btn")
 const newCardBtn = document.getElementById("new-card-btn")
 const standBtn = document.getElementById("stand-btn")
@@ -20,6 +22,14 @@ function renderGame(data) {
     }
 
     sumEl.textContent = "Sum: " + data.PlayerScore
+
+    dealerCardsEl.textContent = "Dealer's Cards: "
+    for (let i = 0; i < data.Dealer.length; i++) {
+        dealerCardsEl.textContent += data.Dealer[i].Value + " "
+    }
+
+    dealerSumEl.textContent = "Dealer's Sum: " + data.DealerScore
+
 
     switch (data.State) {
         case "playing":
