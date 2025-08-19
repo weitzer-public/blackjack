@@ -6,11 +6,10 @@ import (
 )
 
 // Card represents a playing card with a suit and value.
-// Suit: 0-3 (Spades, Hearts, Diamonds, Clubs)
-// Value: 1-13 (Ace-King)
 type Card struct {
-	Suit  int
-	Value int
+	Suit  string
+	Value string
+	Rank  int
 }
 
 // Deck represents a deck of cards.
@@ -19,16 +18,14 @@ type Deck []Card
 // NewDeck creates a new deck of 52 cards.
 func NewDeck() Deck {
 	deck := make(Deck, 52)
-	const (
-		Spades Suit = iota
-		Hearts
-		Diamonds
-		Clubs
-	)
-	for suit := Spades; suit <= Clubs; suit++ {
-	for suit := 0; suit < 4; suit++ {
-		for value := 1; value <= 13; value++ {
-			deck[i] = Card{Suit: suit, Value: value}
+	suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
+	values := []string{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"}
+	ranks := []int{11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10}
+
+	i := 0
+	for _, suit := range suits {
+		for j, value := range values {
+			deck[i] = Card{Suit: suit, Value: value, Rank: ranks[j]}
 			i++
 		}
 	}
@@ -38,9 +35,7 @@ func NewDeck() Deck {
 // Shuffle shuffles the deck.
 func (d Deck) Shuffle() {
 	rand.Seed(time.Now().UnixNano())
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+	rand.Shuffle(len(d), func(i, j int) {
 		d[i], d[j] = d[j], d[i]
 	})
 }
@@ -67,7 +62,6 @@ type VisibleGame struct {
 	State       string
 }
 
-
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
 func NewGame() Game {
 	deck := NewDeck()
@@ -77,19 +71,18 @@ func NewGame() Game {
 	dealerHand := Hand{deck[1], deck[3]}
 
 	playerScore := HandScore(playerHand)
-	// The dealer's score is initially calculated with only the visible card.
-	dealerScore := HandScore(Hand{dealerHand[0]})
+	dealerScore := HandScore(dealerHand)
 
 	state := "playing"
 	if playerScore == 21 {
-		if HandScore(dealerHand) == 21 {
+		if dealerScore == 21 {
 			state = "tie"
 		} else {
 			state = "player_wins"
 		}
 	}
 
-	game := Game{
+	return Game{
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
@@ -97,8 +90,6 @@ func NewGame() Game {
 		DealerScore: dealerScore,
 		State:       state,
 	}
-
-	return game
 }
 
 // HandScore calculates the score of a hand.
@@ -106,24 +97,70 @@ func HandScore(hand Hand) int {
 	score := 0
 	aces := 0
 	for _, card := range hand {
-		if card.Value > 10 {
-		const (
-			Ace = 1
-			Jack = 11
-			Queen = 12
-			King = 13
-		)
-		if card.Value >= Jack {
-		} else if card.Value == 1 {
+		if card.Rank == 11 {
 			aces++
-			score += 11
-		} else {
-			score += card.Value
 		}
+		score += card.Rank
 	}
 	for score > 21 && aces > 0 {
 		score -= 10
 		aces--
 	}
 	return score
+}
+
+// Hit gives the player another card.
+func (g *Game) Hit() {
+	if g.State != "playing" {
+		return
+	}
+	g.Player = append(g.Player, g.Deck[0])
+	g.Deck = g.Deck[1:]
+	g.PlayerScore = HandScore(g.Player)
+	if g.PlayerScore > 21 {
+		g.State = "player_busts"
+	}
+}
+
+// Stand ends the player's turn and plays the dealer's turn.
+func (g *Game) Stand() {
+	if g.State != "playing" {
+		return
+	}
+	// Dealer plays
+	for g.DealerScore < 17 {
+		g.Dealer = append(g.Dealer, g.Deck[0])
+		g.Deck = g.Deck[1:]
+		g.DealerScore = HandScore(g.Dealer)
+	}
+
+	// Determine winner
+	if g.DealerScore > 21 || g.PlayerScore > g.DealerScore {
+		g.State = "player_wins"
+	} else if g.DealerScore > g.PlayerScore {
+		g.State = "dealer_wins"
+	} else {
+		g.State = "tie"
+	}
+}
+
+// ToVisible converts a Game to a VisibleGame for the client.
+func (g *Game) ToVisible() VisibleGame {
+	if g.State == "playing" {
+		return VisibleGame{
+			Player:      g.Player,
+			Dealer:      []Card{g.Dealer[0]}, // Only show one card
+			PlayerScore: g.PlayerScore,
+			DealerScore: HandScore(Hand{g.Dealer[0]}),
+			State:       g.State,
+		}
+	}
+
+	return VisibleGame{
+		Player:      g.Player,
+		Dealer:      g.Dealer,
+		PlayerScore: g.PlayerScore,
+		DealerScore: g.DealerScore,
+		State:       g.State,
+	}
 }
