@@ -19,13 +19,7 @@ type Deck []Card
 // NewDeck creates a new deck of 52 cards.
 func NewDeck() Deck {
 	deck := make(Deck, 52)
-	const (
-		Spades Suit = iota
-		Hearts
-		Diamonds
-		Clubs
-	)
-	for suit := Spades; suit <= Clubs; suit++ {
+	i := 0
 	for suit := 0; suit < 4; suit++ {
 		for value := 1; value <= 13; value++ {
 			deck[i] = Card{Suit: suit, Value: value}
@@ -37,12 +31,13 @@ func NewDeck() Deck {
 
 // Shuffle shuffles the deck.
 func (d Deck) Shuffle() {
-	rand.Seed(time.Now().UnixNano())
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+	rand.Shuffle(len(d), func(i, j int) {
 		d[i], d[j] = d[j], d[i]
 	})
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 // Hand represents a player's or dealer's hand of cards.
@@ -53,20 +48,11 @@ type Game struct {
 	Deck        Deck
 	Player      Hand
 	Dealer      Hand
+	HiddenCard  Card
 	PlayerScore int
 	DealerScore int
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
 }
-
-// VisibleGame is the representation of the game state sent to the client.
-type VisibleGame struct {
-	Player      Hand
-	Dealer      []Card // Only one card is visible to the player
-	PlayerScore int
-	DealerScore int // Only the score of the visible card
-	State       string
-}
-
 
 // NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
 func NewGame() Game {
@@ -74,15 +60,16 @@ func NewGame() Game {
 	deck.Shuffle()
 
 	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1], deck[3]}
+	dealerHand := Hand{deck[1]}
+	hiddenCard := deck[3]
 
 	playerScore := HandScore(playerHand)
-	// The dealer's score is initially calculated with only the visible card.
-	dealerScore := HandScore(Hand{dealerHand[0]})
+	dealerScore := HandScore(dealerHand)
 
 	state := "playing"
 	if playerScore == 21 {
-		if HandScore(dealerHand) == 21 {
+		// Dealer's full hand for blackjack check
+		if HandScore(Hand{dealerHand[0], hiddenCard}) == 21 {
 			state = "tie"
 		} else {
 			state = "player_wins"
@@ -93,6 +80,7 @@ func NewGame() Game {
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
+		HiddenCard:  hiddenCard,
 		PlayerScore: playerScore,
 		DealerScore: dealerScore,
 		State:       state,
@@ -106,15 +94,15 @@ func HandScore(hand Hand) int {
 	score := 0
 	aces := 0
 	for _, card := range hand {
-		if card.Value > 10 {
 		const (
-			Ace = 1
-			Jack = 11
+			Ace   = 1
+			Jack  = 11
 			Queen = 12
-			King = 13
+			King  = 13
 		)
 		if card.Value >= Jack {
-		} else if card.Value == 1 {
+			score += 10
+		} else if card.Value == Ace {
 			aces++
 			score += 11
 		} else {
@@ -126,4 +114,46 @@ func HandScore(hand Hand) int {
 		aces--
 	}
 	return score
+}
+
+// Hit gives the player another card.
+func (g *Game) Hit() {
+	if g.State != "playing" {
+		return
+	}
+
+	g.Player = append(g.Player, g.Deck[0])
+	g.Deck = g.Deck[1:]
+	g.PlayerScore = HandScore(g.Player)
+
+	if g.PlayerScore > 21 {
+		g.State = "player_busts"
+	}
+}
+
+// Stand ends the player's turn and plays the dealer's turn.
+func (g *Game) Stand() {
+	if g.State != "playing" {
+		return
+	}
+
+	// Reveal the dealer's hidden card
+	g.Dealer = append(g.Dealer, g.HiddenCard)
+	g.DealerScore = HandScore(g.Dealer)
+
+	// Dealer plays
+	for g.DealerScore < 17 {
+		g.Dealer = append(g.Dealer, g.Deck[0])
+		g.Deck = g.Deck[1:]
+		g.DealerScore = HandScore(g.Dealer)
+	}
+
+	// Determine the winner
+	if g.DealerScore > 21 || g.PlayerScore > g.DealerScore {
+		g.State = "player_wins"
+	} else if g.DealerScore > g.PlayerScore {
+		g.State = "dealer_wins"
+	} else {
+		g.State = "tie"
+	}
 }

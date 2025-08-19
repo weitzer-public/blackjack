@@ -24,11 +24,15 @@ function renderGame(data) {
     sumEl.textContent = "Sum: " + data.PlayerScore
 
     dealerCardsEl.textContent = "Dealer's Cards: "
-    for (let i = 0; i < data.Dealer.length; i++) {
-        dealerCardsEl.textContent += data.Dealer[i].Value + " "
+    if (data.State === "playing") {
+        dealerCardsEl.textContent += data.Dealer[0].Value + " ?"
+        dealerSumEl.textContent = "Dealer's Sum: " + data.DealerScore
+    } else {
+        for (let i = 0; i < data.Dealer.length; i++) {
+            dealerCardsEl.textContent += data.Dealer[i].Value + " "
+        }
+        dealerSumEl.textContent = "Dealer's Sum: " + data.DealerScore
     }
-
-    dealerSumEl.textContent = "Dealer's Sum: " + data.DealerScore
 
 
     switch (data.State) {
