@@ -157,3 +157,12 @@ func (g *Game) Stand() {
 		g.State = "tie"
 	}
 }
+
+// VisibleGame represents the state of the game that is visible to the player.
+type VisibleGame struct {
+	Player      Hand   `json:"Player"`
+	Dealer      Hand   `json:"Dealer"`
+	PlayerScore int    `json:"PlayerScore"`
+	DealerScore int    `json:"DealerScore"`
+	State       string `json:"State"`
+}
