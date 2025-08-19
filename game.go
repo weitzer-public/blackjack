@@ -107,7 +107,13 @@ func HandScore(hand Hand) int {
 	aces := 0
 	for _, card := range hand {
 		if card.Value > 10 {
-			score += 10
+		const (
+			Ace = 1
+			Jack = 11
+			Queen = 12
+			King = 13
+		)
+		if card.Value >= Jack {
 		} else if card.Value == 1 {
 			aces++
 			score += 11
