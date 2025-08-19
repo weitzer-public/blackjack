@@ -19,7 +19,13 @@ type Deck []Card
 // NewDeck creates a new deck of 52 cards.
 func NewDeck() Deck {
 	deck := make(Deck, 52)
-	i := 0
+	const (
+		Spades Suit = iota
+		Hearts
+		Diamonds
+		Clubs
+	)
+	for suit := Spades; suit <= Clubs; suit++ {
 	for suit := 0; suit < 4; suit++ {
 		for value := 1; value <= 13; value++ {
 			deck[i] = Card{Suit: suit, Value: value}
