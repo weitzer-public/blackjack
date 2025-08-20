@@ -50,3 +50,11 @@ This is a simple web-based Blackjack game with a Go backend and a plain HTML/CSS
 3. **Open the application in your browser:**
 
    Navigate to [http://localhost:8080](http://localhost:8080) in your web browser.
+
+## Testing
+
+To run the unit tests, use the following command:
+
+```bash
+go test ./...
+```
