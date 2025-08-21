@@ -48,7 +48,6 @@ type Game struct {
 	Deck        Deck
 	Player      Hand
 	Dealer      Hand
-	HiddenCard  Card
 	PlayerScore int
 	DealerScore int
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
@@ -65,6 +64,15 @@ type VisibleGame struct {
 
 // Visible returns a version of the game state that is safe to show to the client.
 func (g *Game) Visible() VisibleGame {
+	if g.State != "playing" {
+		return VisibleGame{
+			Player:      g.Player,
+			Dealer:      g.Dealer,
+			PlayerScore: g.PlayerScore,
+			DealerScore: g.DealerScore,
+			State:       g.State,
+		}
+	}
 	return VisibleGame{
 		Player:      g.Player,
 		Dealer:      g.Dealer[:1],
@@ -88,10 +96,12 @@ func NewGame() Game {
 	state := "playing"
 	if playerScore == 21 {
 		if dealerScore == 21 {
-			state = "tie"
+			state = "push"
 		} else {
-			state = "player_wins"
+			state = "player_blackjack"
 		}
+	} else if dealerScore == 21 {
+		state = "dealer_blackjack"
 	}
 
 	return Game{
@@ -152,10 +162,6 @@ func (g *Game) Stand() {
 		return
 	}
 
-	// Reveal the dealer's hidden card
-	g.Dealer = append(g.Dealer, g.HiddenCard)
-	g.DealerScore = HandScore(g.Dealer)
-
 	// Dealer plays
 	for g.DealerScore < 17 {
 		g.Dealer = append(g.Dealer, g.Deck[0])
@@ -169,8 +175,6 @@ func (g *Game) Stand() {
 	} else if g.DealerScore > g.PlayerScore {
 		g.State = "dealer_wins"
 	} else {
-		g.State = "tie"
+		g.State = "push"
 	}
 }
-
-
