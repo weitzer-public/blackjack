@@ -65,6 +65,15 @@ type VisibleGame struct {
 
 // Visible returns a version of the game state that is safe to show to the client.
 func (g *Game) Visible() VisibleGame {
+	if g.State != "playing" {
+		return VisibleGame{
+			Player:      g.Player,
+			Dealer:      g.Dealer,
+			PlayerScore: g.PlayerScore,
+			DealerScore: g.DealerScore,
+			State:       g.State,
+		}
+	}
 	return VisibleGame{
 		Player:      g.Player,
 		Dealer:      g.Dealer[:1],
@@ -80,7 +89,7 @@ func NewGame() Game {
 	deck.Shuffle()
 
 	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1], deck[3]}
+	dealerHand := Hand{deck[1]}
 
 	playerScore := HandScore(playerHand)
 	dealerScore := HandScore(dealerHand)
@@ -98,6 +107,7 @@ func NewGame() Game {
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
+		HiddenCard:  deck[3],
 		PlayerScore: playerScore,
 		DealerScore: dealerScore,
 		State:       state,

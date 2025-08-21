@@ -23,3 +23,37 @@ func TestHandScore(t *testing.T) {
 		}
 	}
 }
+
+func TestNewGame(t *testing.T) {
+	game := NewGame()
+
+	if len(game.Player) != 2 {
+		t.Errorf("Expected player to have 2 cards, but got %d", len(game.Player))
+	}
+
+	if len(game.Dealer) != 1 {
+		t.Errorf("Expected dealer to have 1 card, but got %d", len(game.Dealer))
+	}
+
+	if game.State != "playing" {
+		t.Errorf("Expected game state to be 'playing', but got %s", game.State)
+	}
+}
+
+func TestHit(t *testing.T) {
+	game := NewGame()
+	game.Hit()
+
+	if len(game.Player) != 3 {
+		t.Errorf("Expected player to have 3 cards, but got %d", len(game.Player))
+	}
+}
+
+func TestStand(t *testing.T) {
+	game := NewGame()
+	game.Stand()
+
+	if game.State == "playing" {
+		t.Errorf("Expected game state to not be 'playing', but got %s", game.State)
+	}
+}

@@ -38,5 +38,5 @@ func hitHandler(w http.ResponseWriter, r *http.Request) {
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
 	game.Stand()
-	json.NewEncoder(w).Encode(game)
+	json.NewEncoder(w).Encode(game.Visible())
 }
