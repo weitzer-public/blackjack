@@ -48,7 +48,6 @@ type Game struct {
 	Deck        Deck
 	Player      Hand
 	Dealer      Hand
-	HiddenCard  Card
 	PlayerScore int
 	DealerScore int
 	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
@@ -89,7 +88,7 @@ func NewGame() Game {
 	deck.Shuffle()
 
 	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1]}
+	dealerHand := Hand{deck[1], deck[3]}
 
 	playerScore := HandScore(playerHand)
 	dealerScore := HandScore(dealerHand)
@@ -97,17 +96,18 @@ func NewGame() Game {
 	state := "playing"
 	if playerScore == 21 {
 		if dealerScore == 21 {
-			state = "tie"
+			state = "push"
 		} else {
-			state = "player_wins"
+			state = "player_blackjack"
 		}
+	} else if dealerScore == 21 {
+		state = "dealer_blackjack"
 	}
 
 	return Game{
 		Deck:        deck[4:],
 		Player:      playerHand,
 		Dealer:      dealerHand,
-		HiddenCard:  deck[3],
 		PlayerScore: playerScore,
 		DealerScore: dealerScore,
 		State:       state,
@@ -162,10 +162,6 @@ func (g *Game) Stand() {
 		return
 	}
 
-	// Reveal the dealer's hidden card
-	g.Dealer = append(g.Dealer, g.HiddenCard)
-	g.DealerScore = HandScore(g.Dealer)
-
 	// Dealer plays
 	for g.DealerScore < 17 {
 		g.Dealer = append(g.Dealer, g.Deck[0])
@@ -179,8 +175,6 @@ func (g *Game) Stand() {
 	} else if g.DealerScore > g.PlayerScore {
 		g.State = "dealer_wins"
 	} else {
-		g.State = "tie"
+		g.State = "push"
 	}
 }
-
-

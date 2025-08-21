@@ -4,6 +4,21 @@ import (
 	"testing"
 )
 
+func newTestGame() Game {
+	deck := NewDeck()
+	// No shuffle for deterministic testing
+	playerHand := Hand{deck[0], deck[2]}
+	dealerHand := Hand{deck[1], deck[3]}
+	return Game{
+		Deck:        deck[4:],
+		Player:      playerHand,
+		Dealer:      dealerHand,
+		PlayerScore: HandScore(playerHand),
+		DealerScore: HandScore(dealerHand),
+		State:       "playing",
+	}
+}
+
 func TestHandScore(t *testing.T) {
 	testCases := []struct {
 		hand Hand
@@ -31,17 +46,13 @@ func TestNewGame(t *testing.T) {
 		t.Errorf("Expected player to have 2 cards, but got %d", len(game.Player))
 	}
 
-	if len(game.Dealer) != 1 {
-		t.Errorf("Expected dealer to have 1 card, but got %d", len(game.Dealer))
-	}
-
-	if game.State != "playing" {
-		t.Errorf("Expected game state to be 'playing', but got %s", game.State)
+	if len(game.Dealer) != 2 {
+		t.Errorf("Expected dealer to have 2 cards, but got %d", len(game.Dealer))
 	}
 }
 
 func TestHit(t *testing.T) {
-	game := NewGame()
+	game := newTestGame()
 	game.Hit()
 
 	if len(game.Player) != 3 {
@@ -50,7 +61,7 @@ func TestHit(t *testing.T) {
 }
 
 func TestStand(t *testing.T) {
-	game := NewGame()
+	game := newTestGame()
 	game.Stand()
 
 	if game.State == "playing" {
