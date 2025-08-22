@@ -1,22 +1,13 @@
 package main
 
 import (
+	"math/rand"
 	"testing"
 )
 
-func newTestGame() Game {
-	deck := NewDeck()
-	// No shuffle for deterministic testing
-	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1], deck[3]}
-	return Game{
-		Deck:        deck[4:],
-		Player:      playerHand,
-		Dealer:      dealerHand,
-		PlayerScore: HandScore(playerHand),
-		DealerScore: HandScore(dealerHand),
-		State:       "playing",
-	}
+func init() {
+	deterministicShuffle = true
+	rand.Seed(0)
 }
 
 func TestHandScore(t *testing.T) {
@@ -42,29 +33,82 @@ func TestHandScore(t *testing.T) {
 func TestNewGame(t *testing.T) {
 	game := NewGame()
 
-	if len(game.Player) != 2 {
-		t.Errorf("Expected player to have 2 cards, but got %d", len(game.Player))
+	if len(game.Players) != 5 {
+		t.Errorf("Expected 5 players, but got %d", len(game.Players))
 	}
 
-	if len(game.Dealer) != 2 {
-		t.Errorf("Expected dealer to have 2 cards, but got %d", len(game.Dealer))
+	if len(game.Dealer.Hand) != 2 {
+		t.Errorf("Expected dealer to have 2 cards, but got %d", len(game.Dealer.Hand))
+	}
+
+	if !game.Players[2].IsHuman {
+		t.Errorf("Expected player 2 to be human")
 	}
 }
 
 func TestHit(t *testing.T) {
-	game := newTestGame()
+	game := NewGame()
+	game.Turn = 2 // Set turn to human player
 	game.Hit()
 
-	if len(game.Player) != 3 {
-		t.Errorf("Expected player to have 3 cards, but got %d", len(game.Player))
+	if len(game.Players[2].Hand) != 3 {
+		t.Errorf("Expected player to have 3 cards, but got %d", len(game.Players[2].Hand))
 	}
 }
 
 func TestStand(t *testing.T) {
-	game := newTestGame()
+	game := NewGame()
+	game.Turn = 2 // Set turn to human player
 	game.Stand()
 
-	if game.State == "playing" {
-		t.Errorf("Expected game state to not be 'playing', but got %s", game.State)
+	if game.Players[2].Status != "stand" {
+		t.Errorf("Expected player status to be 'stand', but got %s", game.Players[2].Status)
+	}
+}
+
+func TestNextTurn(t *testing.T) {
+	game := NewGame()
+	game.NextTurn()
+
+	// With a deterministic shuffle, the first player will have a score of 15 and will hit.
+	// The second player will have a score of 15 and will hit.
+	// The third player is human.
+	// So the turn should be 2.
+	if game.Turn != 2 {
+		t.Errorf("Expected turn to be 2, but got %d", game.Turn)
+	}
+}
+
+func TestDealerTurn(t *testing.T) {
+	game := NewGame()
+	game.dealerTurn()
+
+	if game.Dealer.Score < 17 {
+		t.Errorf("Expected dealer score to be at least 17, but got %d", game.Dealer.Score)
+	}
+}
+
+func TestDetermineWinner(t *testing.T) {
+	testCases := []struct {
+		player      Player
+		dealer      Player
+		expectedStatus string
+	}{
+		{player: Player{Score: 20, Status: "stand"}, dealer: Player{Score: 19}, expectedStatus: "player_wins"},
+		{player: Player{Score: 18, Status: "stand"}, dealer: Player{Score: 19}, expectedStatus: "dealer_wins"},
+		{player: Player{Score: 19, Status: "stand"}, dealer: Player{Score: 19}, expectedStatus: "push"},
+		{player: Player{Score: 22, Status: "bust"}, dealer: Player{Score: 19}, expectedStatus: "dealer_wins"},
+		{player: Player{Score: 21, Status: "blackjack"}, dealer: Player{Score: 19}, expectedStatus: "player_wins"},
+		{player: Player{Score: 21, Status: "blackjack"}, dealer: Player{Score: 21, Status: "blackjack"}, expectedStatus: "push"},
+	}
+
+	for _, tc := range testCases {
+		game := NewGame()
+		game.Players[0] = tc.player
+		game.Dealer = tc.dealer
+		game.determineWinner()
+		if game.Players[0].Status != tc.expectedStatus {
+			t.Errorf("Expected player status to be %s, but got %s", tc.expectedStatus, game.Players[0].Status)
+		}
 	}
 }
