@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"math/rand"
 	"time"
 )
@@ -55,11 +56,31 @@ func init() {
 // Hand represents a player's or dealer's hand of cards.
 type Hand []Card
 
+type PlayerStatus int
+
+const (
+	Playing PlayerStatus = iota
+	Bust
+	Stand
+	BlackjackWin
+	Push
+	PlayerWins
+	DealerWins
+)
+
+func (s PlayerStatus) String() string {
+	return [...]string{"playing", "bust", "stand", "blackjack", "push", "player_wins", "dealer_wins"}[s]
+}
+
+func (s PlayerStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
 // Player represents a player in the game.
 type Player struct {
 	Hand    Hand
 	Score   int
-	Status  string // e.g., "playing", "bust", "stand", "blackjack"
+	Status  PlayerStatus
 	IsHuman bool
 }
 
@@ -113,12 +134,12 @@ func NewGame() Game {
 	for i := 0; i < NumPlayers; i++ {
 		players[i] = Player{
 			Hand:    Hand{deck[i*NumCardsDeal], deck[i*NumCardsDeal+1]},
-			Status:  "playing",
+			Status:  Playing,
 			IsHuman: i == HumanPlayer, // The middle player is human
 		}
 		players[i].Score = HandScore(players[i].Hand)
 		if players[i].Score == Blackjack {
-			players[i].Status = "blackjack"
+			players[i].Status = BlackjackWin
 		}
 	}
 
@@ -126,10 +147,10 @@ func NewGame() Game {
 	dealer := Player{
 		Hand:   dealerHand,
 		Score:  HandScore(dealerHand),
-		Status: "playing",
+		Status: Playing,
 	}
 	if dealer.Score == Blackjack {
-		dealer.Status = "blackjack"
+		dealer.Status = BlackjackWin
 	}
 
 	game := Game{
@@ -177,7 +198,7 @@ func (g *Game) Hit() {
 	}
 
 	player := &g.Players[g.Turn]
-	if player.Status != "playing" {
+	if player.Status != Playing {
 		return
 	}
 
@@ -186,7 +207,7 @@ func (g *Game) Hit() {
 	player.Score = HandScore(player.Hand)
 
 	if player.Score > 21 {
-		player.Status = "bust"
+		player.Status = Bust
 	}
 }
 
@@ -197,11 +218,11 @@ func (g *Game) Stand() {
 	}
 
 	player := &g.Players[g.Turn]
-	if player.Status != "playing" {
+	if player.Status != Playing {
 		return
 	}
 
-	player.Status = "stand"
+	player.Status = Stand
 }
 
 // NextTurn moves to the next player or the dealer's turn.
@@ -210,22 +231,22 @@ func (g *Game) NextTurn() {
 
 	for g.Turn < len(g.Players) {
 		player := &g.Players[g.Turn]
-		if player.IsHuman && player.Status == "playing" {
+		if player.IsHuman && player.Status == Playing {
 			// It's the human player's turn
 			return
 		}
 
-		if player.Status == "playing" {
+		if player.Status == Playing {
 			// It's a computer player's turn
-			for player.Score < 17 {
+			for player.Score < DealerStand {
 				player.Hand = append(player.Hand, g.Deck[0])
 				g.Deck = g.Deck[1:]
 				player.Score = HandScore(player.Hand)
 			}
 			if player.Score > 21 {
-				player.Status = "bust"
+				player.Status = Bust
 			} else {
-				player.Status = "stand"
+				player.Status = Stand
 			}
 		}
 		g.Turn++
@@ -239,15 +260,15 @@ func (g *Game) NextTurn() {
 // dealerTurn plays the dealer's turn.
 func (g *Game) dealerTurn() {
 	// Dealer plays
-	for g.Dealer.Score < 17 {
+	for g.Dealer.Score < DealerStand {
 		g.Dealer.Hand = append(g.Dealer.Hand, g.Deck[0])
 		g.Deck = g.Deck[1:]
 		g.Dealer.Score = HandScore(g.Dealer.Hand)
 	}
 	if g.Dealer.Score > 21 {
-		g.Dealer.Status = "bust"
+		g.Dealer.Status = Bust
 	} else {
-		g.Dealer.Status = "stand"
+		g.Dealer.Status = Stand
 	}
 
 
@@ -262,43 +283,43 @@ func (g *Game) determineWinner() {
 		player := &g.Players[i]
 
 		// If player has blackjack
-		if player.Status == "blackjack" {
-			if g.Dealer.Status == "blackjack" {
-				player.Status = "push" // Both have blackjack
+		if player.Status == BlackjackWin {
+			if g.Dealer.Status == BlackjackWin {
+				player.Status = Push // Both have blackjack
 			} else {
-				player.Status = "player_wins" // Player has blackjack, dealer doesn't
+				player.Status = PlayerWins // Player has blackjack, dealer doesn't
 			}
 			continue
 		}
 
 		// If dealer has blackjack
-		if g.Dealer.Status == "blackjack" {
-			if player.Status != "bust" {
-				player.Status = "dealer_wins"
+		if g.Dealer.Status == BlackjackWin {
+			if player.Status != Bust {
+				player.Status = DealerWins
 			}
 			continue
 		}
 
 		// If player is bust
-		if player.Status == "bust" {
-			player.Status = "dealer_wins"
+		if player.Status == Bust {
+			player.Status = DealerWins
 			continue
 		}
 
 		// If dealer is bust
-		if g.Dealer.Status == "bust" {
-			player.Status = "player_wins"
+		if g.Dealer.Status == Bust {
+			player.Status = PlayerWins
 			continue
 		}
 
 		// Compare scores
-		if player.Status == "stand" {
+		if player.Status == Stand {
 			if player.Score > dealerScore {
-				player.Status = "player_wins"
+				player.Status = PlayerWins
 			} else if player.Score < dealerScore {
-				player.Status = "dealer_wins"
+				player.Status = DealerWins
 			} else {
-				player.Status = "push"
+				player.Status = Push
 			}
 		}
 	}

@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 )
 
-var game Game
+var (
+	game  Game
+	mutex = &sync.Mutex{}
+)
 
 func main() {
 	fs := http.FileServer(http.Dir("./frontend"))
@@ -23,15 +27,19 @@ func main() {
 }
 
 func newGameHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	game = NewGame()
 	game.NextTurn()
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if game.Players[game.Turn].IsHuman {
 		game.Hit()
-		if game.Players[game.Turn].Status == "bust" {
+		if game.Players[game.Turn].Status == Bust {
 			game.NextTurn()
 		}
 	}
@@ -39,6 +47,8 @@ func hitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if game.Players[game.Turn].IsHuman {
 		game.Stand()
 		game.NextTurn()

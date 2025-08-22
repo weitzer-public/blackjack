@@ -63,10 +63,24 @@ function renderGame(data) {
             messageEl.textContent = "Your turn!";
             break;
         case "game_over":
-            messageEl.textContent = "Game over!";
+            const humanPlayer = data.Players.find(p => p.IsHuman);
+            switch (humanPlayer.Status) {
+                case "player_wins":
+                    messageEl.textContent = "You win!";
+                    break;
+                case "dealer_wins":
+                    messageEl.textContent = "Dealer wins!";
+                    break;
+                case "push":
+                    messageEl.textContent = "It's a push!";
+                    break;
+                case "bust":
+                    messageEl.textContent = "Bust!";
+                    break;
+                default:
+                    messageEl.textContent = "Game over!";
+            }
             break;
-        default:
-            messageEl.textContent = data.State;
     }
 }
 
