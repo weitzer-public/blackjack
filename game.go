@@ -43,75 +43,92 @@ func init() {
 // Hand represents a player's or dealer's hand of cards.
 type Hand []Card
 
+// Player represents a player in the game.
+type Player struct {
+	Hand    Hand
+	Score   int
+	Status  string // e.g., "playing", "bust", "stand", "blackjack"
+	IsHuman bool
+}
+
 // Game represents the state of a blackjack game.
 type Game struct {
-	Deck        Deck
-	Player      Hand
-	Dealer      Hand
-	PlayerScore int
-	DealerScore int
-	State       string // e.g., "playing", "player_wins", "dealer_wins", "player_busts", "tie"
+	Deck    Deck
+	Players []Player
+	Dealer  Player
+	State   string // e.g., "playing", "game_over"
+	Turn    int    // Index of the current player in the Players slice
 }
 
 // VisibleGame is the version of the Game struct that is sent to the client.
 type VisibleGame struct {
-	Player      Hand   `json:"Player"`
-	Dealer      Hand   `json:"Dealer"`
-	PlayerScore int    `json:"PlayerScore"`
-	DealerScore int    `json:"DealerScore"`
-	State       string `json:"State"`
+	Players []Player `json:"Players"`
+	Dealer  Player   `json:"Dealer"`
+	State   string   `json:"State"`
+	Turn    int      `json:"Turn"`
 }
 
 // Visible returns a version of the game state that is safe to show to the client.
 func (g *Game) Visible() VisibleGame {
 	if g.State != "playing" {
 		return VisibleGame{
-			Player:      g.Player,
-			Dealer:      g.Dealer,
-			PlayerScore: g.PlayerScore,
-			DealerScore: g.DealerScore,
-			State:       g.State,
+			Players: g.Players,
+			Dealer:  g.Dealer,
+			State:   g.State,
+			Turn:    g.Turn,
 		}
 	}
+
+	// Hide the dealer's second card
+	visibleDealer := g.Dealer
+	visibleDealer.Hand = g.Dealer.Hand[:1]
+	visibleDealer.Score = HandScore(visibleDealer.Hand)
+
 	return VisibleGame{
-		Player:      g.Player,
-		Dealer:      g.Dealer[:1],
-		PlayerScore: g.PlayerScore,
-		DealerScore: HandScore(g.Dealer[:1]),
-		State:       g.State,
+		Players: g.Players,
+		Dealer:  visibleDealer,
+		State:   g.State,
+		Turn:    g.Turn,
 	}
 }
 
-// NewGame creates a new game with a shuffled deck and two cards for the player and dealer.
+// NewGame creates a new game with a shuffled deck and two cards for each player and the dealer.
 func NewGame() Game {
 	deck := NewDeck()
 	deck.Shuffle()
 
-	playerHand := Hand{deck[0], deck[2]}
-	dealerHand := Hand{deck[1], deck[3]}
-
-	playerScore := HandScore(playerHand)
-	dealerScore := HandScore(dealerHand)
-
-	state := "playing"
-	if playerScore == 21 {
-		if dealerScore == 21 {
-			state = "push"
-		} else {
-			state = "player_blackjack"
+	players := make([]Player, 5)
+	for i := 0; i < 5; i++ {
+		players[i] = Player{
+			Hand:    Hand{deck[i*2], deck[i*2+1]},
+			Status:  "playing",
+			IsHuman: i == 2, // The middle player is human
 		}
-	} else if dealerScore == 21 {
-		state = "dealer_blackjack"
+		players[i].Score = HandScore(players[i].Hand)
+		if players[i].Score == 21 {
+			players[i].Status = "blackjack"
+		}
 	}
 
-	return Game{
-		Deck:        deck[4:],
-		Player:      playerHand,
-		Dealer:      dealerHand,
-		PlayerScore: playerScore,
-		DealerScore: dealerScore,
-		State:       state,
+	dealerHand := Hand{deck[10], deck[11]}
+	dealer := Player{
+		Hand:   dealerHand,
+		Score:  HandScore(dealerHand),
+		Status: "playing",
 	}
+	if dealer.Score == 21 {
+		dealer.Status = "blackjack"
+	}
+
+	game := Game{
+		Deck:    deck[12:],
+		Players: players,
+		Dealer:  dealer,
+		State:   "playing",
+		Turn:    0, // Start with the first player
+	}
+
+	return game
 }
 
 // HandScore calculates the score of a hand.
@@ -141,40 +158,88 @@ func HandScore(hand Hand) int {
 	return score
 }
 
-// Hit gives the player another card.
+// Hit gives the current player another card.
 func (g *Game) Hit() {
 	if g.State != "playing" {
 		return
 	}
 
-	g.Player = append(g.Player, g.Deck[0])
-	g.Deck = g.Deck[1:]
-	g.PlayerScore = HandScore(g.Player)
+	player := &g.Players[g.Turn]
+	if player.Status != "playing" {
+		return
+	}
 
-	if g.PlayerScore > 21 {
-		g.State = "player_busts"
+	player.Hand = append(player.Hand, g.Deck[0])
+	g.Deck = g.Deck[1:]
+	player.Score = HandScore(player.Hand)
+
+	if player.Score > 21 {
+		player.Status = "bust"
+		g.NextTurn()
 	}
 }
 
-// Stand ends the player's turn and plays the dealer's turn.
+// Stand ends the current player's turn.
 func (g *Game) Stand() {
 	if g.State != "playing" {
 		return
 	}
 
+	player := &g.Players[g.Turn]
+	if player.Status != "playing" {
+		return
+	}
+
+	player.Status = "stand"
+	g.NextTurn()
+}
+
+// NextTurn moves to the next player or the dealer's turn.
+func (g *Game) NextTurn() {
+	for g.Turn < len(g.Players) && g.Players[g.Turn].Status != "playing" {
+		g.Turn++
+	}
+
+	if g.Turn >= len(g.Players) {
+		g.dealerTurn()
+	}
+}
+
+// dealerTurn plays the dealer's turn.
+func (g *Game) dealerTurn() {
 	// Dealer plays
-	for g.DealerScore < 17 {
-		g.Dealer = append(g.Dealer, g.Deck[0])
+	for g.Dealer.Score < 17 {
+		g.Dealer.Hand = append(g.Dealer.Hand, g.Deck[0])
 		g.Deck = g.Deck[1:]
-		g.DealerScore = HandScore(g.Dealer)
+		g.Dealer.Score = HandScore(g.Dealer.Hand)
 	}
 
 	// Determine the winner
-	if g.DealerScore > 21 || g.PlayerScore > g.DealerScore {
-		g.State = "player_wins"
-	} else if g.DealerScore > g.PlayerScore {
-		g.State = "dealer_wins"
-	} else {
-		g.State = "push"
+	g.determineWinner()
+}
+
+// determineWinner determines the winner of the game.
+func (g *Game) determineWinner() {
+	dealerScore := g.Dealer.Score
+	for i := range g.Players {
+		player := &g.Players[i]
+		if player.Status == "blackjack" {
+			if g.Dealer.Status == "blackjack" {
+				player.Status = "push"
+			} else {
+				player.Status = "player_wins"
+			}
+		} else if player.Status == "bust" {
+			player.Status = "dealer_wins"
+		} else if player.Status == "playing" || player.Status == "stand" {
+			if dealerScore > 21 || player.Score > dealerScore {
+				player.Status = "player_wins"
+			} else if dealerScore > player.Score {
+				player.Status = "dealer_wins"
+			} else {
+				player.Status = "push"
+			}
+		}
 	}
+	g.State = "game_over"
 }

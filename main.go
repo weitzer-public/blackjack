@@ -22,21 +22,21 @@ func main() {
 	}
 }
 
-
-
-
-
 func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	game = NewGame()
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
-	game.Hit()
+	if game.Players[game.Turn].IsHuman {
+		game.Hit()
+	}
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
-	game.Stand()
+	if game.Players[game.Turn].IsHuman {
+		game.Stand()
+	}
 	json.NewEncoder(w).Encode(game.Visible())
 }
