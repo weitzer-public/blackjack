@@ -6,13 +6,19 @@ const newGameBtn = document.getElementById("new-game-btn");
 const hitBtn = document.getElementById("hit-btn");
 const standBtn = document.getElementById("stand-btn");
 
+function getCardName(card) {
+    const suits = ["♠", "♥", "♦", "♣"];
+    const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    return `${values[card.Value - 1]}${suits[card.Suit]}`;
+}
+
 function renderGame(data) {
     // Render the dealer's hand
     dealerCardsEl.innerHTML = "";
     for (const card of data.Dealer.Hand) {
         const cardEl = document.createElement("div");
         cardEl.classList.add("card");
-        cardEl.textContent = card.Value;
+        cardEl.textContent = getCardName(card);
         dealerCardsEl.appendChild(cardEl);
     }
     dealerScoreEl.textContent = data.Dealer.Score;
@@ -35,7 +41,7 @@ function renderGame(data) {
         for (const card of player.Hand) {
             const cardEl = document.createElement("div");
             cardEl.classList.add("card");
-            cardEl.textContent = card.Value;
+            cardEl.textContent = getCardName(card);
             cardsEl.appendChild(cardEl);
         }
         playerEl.appendChild(cardsEl);

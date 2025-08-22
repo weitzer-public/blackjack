@@ -24,12 +24,16 @@ func main() {
 
 func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	game = NewGame()
+	game.NextTurn()
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
 	if game.Players[game.Turn].IsHuman {
 		game.Hit()
+		if game.Players[game.Turn].Status == "bust" {
+			game.NextTurn()
+		}
 	}
 	json.NewEncoder(w).Encode(game.Visible())
 }
@@ -37,6 +41,7 @@ func hitHandler(w http.ResponseWriter, r *http.Request) {
 func standHandler(w http.ResponseWriter, r *http.Request) {
 	if game.Players[game.Turn].IsHuman {
 		game.Stand()
+		game.NextTurn()
 	}
 	json.NewEncoder(w).Encode(game.Visible())
 }

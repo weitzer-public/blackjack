@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+const (
+	NumPlayers   = 5
+	HumanPlayer  = 2
+	NumCardsDeal = 2
+	Blackjack    = 21
+	DealerStand  = 17
+)
+
 // Card represents a playing card with a suit and value.
 // Suit: 0-3 (Spades, Hearts, Diamonds, Clubs)
 // Value: 1-13 (Ace-King)
@@ -36,8 +44,12 @@ func (d Deck) Shuffle() {
 	})
 }
 
+var deterministicShuffle = false
+
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	if !deterministicShuffle {
+		rand.Seed(time.Now().UnixNano())
+	}
 }
 
 // Hand represents a player's or dealer's hand of cards.
@@ -97,35 +109,35 @@ func NewGame() Game {
 	deck := NewDeck()
 	deck.Shuffle()
 
-	players := make([]Player, 5)
-	for i := 0; i < 5; i++ {
+	players := make([]Player, NumPlayers)
+	for i := 0; i < NumPlayers; i++ {
 		players[i] = Player{
-			Hand:    Hand{deck[i*2], deck[i*2+1]},
+			Hand:    Hand{deck[i*NumCardsDeal], deck[i*NumCardsDeal+1]},
 			Status:  "playing",
-			IsHuman: i == 2, // The middle player is human
+			IsHuman: i == HumanPlayer, // The middle player is human
 		}
 		players[i].Score = HandScore(players[i].Hand)
-		if players[i].Score == 21 {
+		if players[i].Score == Blackjack {
 			players[i].Status = "blackjack"
 		}
 	}
 
-	dealerHand := Hand{deck[10], deck[11]}
+	dealerHand := Hand{deck[NumPlayers*NumCardsDeal], deck[NumPlayers*NumCardsDeal+1]}
 	dealer := Player{
 		Hand:   dealerHand,
 		Score:  HandScore(dealerHand),
 		Status: "playing",
 	}
-	if dealer.Score == 21 {
+	if dealer.Score == Blackjack {
 		dealer.Status = "blackjack"
 	}
 
 	game := Game{
-		Deck:    deck[12:],
+		Deck:    deck[NumPlayers*NumCardsDeal+NumCardsDeal:],
 		Players: players,
 		Dealer:  dealer,
 		State:   "playing",
-		Turn:    0, // Start with the first player
+		Turn:    -1, // Start before the first player
 	}
 
 	return game
@@ -151,7 +163,7 @@ func HandScore(hand Hand) int {
 			score += card.Value
 		}
 	}
-	for score > 21 && aces > 0 {
+	for score > Blackjack && aces > 0 {
 		score -= 10
 		aces--
 	}
@@ -175,7 +187,6 @@ func (g *Game) Hit() {
 
 	if player.Score > 21 {
 		player.Status = "bust"
-		g.NextTurn()
 	}
 }
 
@@ -191,12 +202,32 @@ func (g *Game) Stand() {
 	}
 
 	player.Status = "stand"
-	g.NextTurn()
 }
 
 // NextTurn moves to the next player or the dealer's turn.
 func (g *Game) NextTurn() {
-	for g.Turn < len(g.Players) && g.Players[g.Turn].Status != "playing" {
+	g.Turn++
+
+	for g.Turn < len(g.Players) {
+		player := &g.Players[g.Turn]
+		if player.IsHuman && player.Status == "playing" {
+			// It's the human player's turn
+			return
+		}
+
+		if player.Status == "playing" {
+			// It's a computer player's turn
+			for player.Score < 17 {
+				player.Hand = append(player.Hand, g.Deck[0])
+				g.Deck = g.Deck[1:]
+				player.Score = HandScore(player.Hand)
+			}
+			if player.Score > 21 {
+				player.Status = "bust"
+			} else {
+				player.Status = "stand"
+			}
+		}
 		g.Turn++
 	}
 
@@ -213,6 +244,12 @@ func (g *Game) dealerTurn() {
 		g.Deck = g.Deck[1:]
 		g.Dealer.Score = HandScore(g.Dealer.Hand)
 	}
+	if g.Dealer.Score > 21 {
+		g.Dealer.Status = "bust"
+	} else {
+		g.Dealer.Status = "stand"
+	}
+
 
 	// Determine the winner
 	g.determineWinner()
@@ -223,18 +260,42 @@ func (g *Game) determineWinner() {
 	dealerScore := g.Dealer.Score
 	for i := range g.Players {
 		player := &g.Players[i]
+
+		// If player has blackjack
 		if player.Status == "blackjack" {
 			if g.Dealer.Status == "blackjack" {
-				player.Status = "push"
+				player.Status = "push" // Both have blackjack
 			} else {
-				player.Status = "player_wins"
+				player.Status = "player_wins" // Player has blackjack, dealer doesn't
 			}
-		} else if player.Status == "bust" {
+			continue
+		}
+
+		// If dealer has blackjack
+		if g.Dealer.Status == "blackjack" {
+			if player.Status != "bust" {
+				player.Status = "dealer_wins"
+			}
+			continue
+		}
+
+		// If player is bust
+		if player.Status == "bust" {
 			player.Status = "dealer_wins"
-		} else if player.Status == "playing" || player.Status == "stand" {
-			if dealerScore > 21 || player.Score > dealerScore {
+			continue
+		}
+
+		// If dealer is bust
+		if g.Dealer.Status == "bust" {
+			player.Status = "player_wins"
+			continue
+		}
+
+		// Compare scores
+		if player.Status == "stand" {
+			if player.Score > dealerScore {
 				player.Status = "player_wins"
-			} else if dealerScore > player.Score {
+			} else if player.Score < dealerScore {
 				player.Status = "dealer_wins"
 			} else {
 				player.Status = "push"
