@@ -15,14 +15,35 @@ h1 {
     font-style: italic;
 }
 
-#game-container {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    flex-wrap: wrap;
+#table {
+    position: relative;
+    width: 800px;
+    height: 400px;
+    margin: 0 auto;
 }
 
-#dealer-container, .player {
+#dealer-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    border: 2px solid white;
+    border-radius: 5px;
+    padding: 10px;
+    min-width: 150px;
+}
+
+#players-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+}
+
+.player {
     border: 2px solid white;
     border-radius: 5px;
     padding: 10px;
