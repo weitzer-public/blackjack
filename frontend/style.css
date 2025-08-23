@@ -15,11 +15,33 @@ h1 {
     font-style: italic;
 }
 
-#game-container {
+#table {
+    position: relative;
+    width: 800px;
+    height: 400px;
+    margin: 0 auto;
+}
+
+#dealer-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    text-align: center;
+}
+
+#players-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    flex-wrap: wrap;
+}
+
+.player {
+    margin: 0 10px;
 }
 
 #dealer-container, .player {
