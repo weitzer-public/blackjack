@@ -27,8 +27,11 @@ h1 {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 200px;
     text-align: center;
+    border: 2px solid white;
+    border-radius: 5px;
+    padding: 10px;
+    min-width: 150px;
 }
 
 #players-container {
@@ -41,10 +44,6 @@ h1 {
 }
 
 .player {
-    margin: 0 10px;
-}
-
-#dealer-container, .player {
     border: 2px solid white;
     border-radius: 5px;
     padding: 10px;
