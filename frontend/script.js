@@ -112,58 +112,60 @@ function renderGame(data) {
     bettingControls.style.display = data.AvailableActions.includes("bet") ? "block" : "none";
 }
 
+function performAction(url, method = 'GET', data = null) {
+    const options = {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+
+    if (data && method === 'POST') {
+        options.body = JSON.stringify(data);
+    }
+
+    fetch(url, options)
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Server error');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        renderGame(data);
+    })
+    .catch(error => {
+        console.error('There has been a problem with your fetch operation:', error);
+        messageBar.textContent = "Error: " + error.message;
+    });
+}
+
 newGameBtn.addEventListener("click", function() {
-    fetch("/api/new_game")
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction("/api/new_game", 'POST');
 });
 
 betBtn.addEventListener("click", function() {
     const amount = betAmountInput.value;
-    fetch(`/api/bet?amount=${amount}`)
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction(`/api/bet?amount=${amount}`, 'GET');
 });
 
 hitBtn.addEventListener("click", function() {
-    fetch("/api/hit")
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction("/api/hit", 'POST');
 });
 
 standBtn.addEventListener("click", function() {
-    fetch("/api/stand")
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction("/api/stand", 'POST');
 });
 
 doubleDownBtn.addEventListener("click", function() {
-    fetch("/api/doubledown")
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction("/api/doubledown", 'POST');
 });
 
 splitBtn.addEventListener("click", function() {
-    fetch("/api/split")
-        .then(response => response.json())
-        .then(data => {
-            renderGame(data);
-        });
+    performAction("/api/split", 'POST');
 });
 
 // Initial game load
-fetch("/api/new_game")
-    .then(response => response.json())
-    .then(data => {
-        renderGame(data);
-    });
+performAction("/api/new_game", 'POST');

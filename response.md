@@ -1,12 +1,13 @@
-I have addressed all the issues discovered by the code review. Here are the details on how I fixed each issue:
+I have addressed the feedback from the code review:
 
-*   **`main.go`**:
-    *   Introduced a `sync.Mutex` to protect the global `game` variable from concurrent access, fixing a critical race condition.
-    *   Updated the `hitHandler` to use the `Bust` constant from the `PlayerStatus` enum.
-*   **`game.go`**:
-    *   Replaced a hardcoded `17` with the `DealerStand` constant in the computer player's and dealer's logic to improve maintainability.
-    *   Introduced a new `PlayerStatus` type with an `iota`-based enumeration to replace the string-based `Status` field, improving type safety.
-    *   Updated the `Player` struct and all related logic to use the new `PlayerStatus` type.
-*   **`frontend/script.js`**:
-    *   Improved the user experience by providing more specific "Game over!" messages based on the human player's final status.
-    *   Removed the unreachable `default` case from the game state `switch` statement.
+1.  **Refactored Frontend `fetch` Calls:**
+    *   I created a new helper function called `performAction(url, method = 'GET', data = null)` in `frontend/script.js`.
+    *   This function takes the API endpoint URL, HTTP method (defaults to 'GET'), and optional data for POST requests.
+    *   It handles the `fetch` call, including setting the appropriate headers and body for POST requests.
+    *   All the event listeners for the buttons (`newGameBtn`, `betBtn`, `hitBtn`, `standBtn`, `doubleDownBtn`, `splitBtn`) are now using this new function, which has significantly reduced code duplication and improved maintainability.
+
+2.  **Added Frontend Error Handling:**
+    *   The `performAction` function includes robust error handling for the `fetch` calls.
+    *   It checks if the response from the server is `ok`. If not, it throws an error with the error message from the server's JSON response.
+    *   The `catch` block now catches these errors and displays a user-friendly error message in the `messageBar` on the UI.
+    *   This ensures that if the server returns an error, the user is notified about the problem, making the application more robust.
