@@ -201,7 +201,7 @@ func (g *Game) dealHand() {
 			g.PlayerChips += g.PlayerBet // Push, return bet
 			g.GameState = "game_over"
 		} else {
-			g.PlayerChips += g.PlayerBet * 2 // Blackjack pays 3:2, for now 2:1
+			g.PlayerChips += g.PlayerBet + (g.PlayerBet*3)/2 // Blackjack pays 3:2
 			g.GameState = "game_over"
 		}
 	} else if g.Dealer.Scores[0] == Blackjack {
