@@ -91,6 +91,7 @@ type Game struct {
 	GameState   string // e.g., "betting", "playing", "game_over"
 	PlayerBet   int
 	PlayerChips int
+	ActiveHand  int
 }
 
 // VisibleGame is the version of the Game struct that is sent to the client.
@@ -134,6 +135,10 @@ func (g *Game) getAvailableActions() []string {
 		// Player can double down on the first two cards
 		if len(g.Player.Hands[0]) == 2 {
 			actions = append(actions, "doubledown")
+		}
+		// Player can split on a pair
+		if len(g.Player.Hands) == 1 && len(g.Player.Hands[0]) == 2 && g.Player.Hands[0][0].Value == g.Player.Hands[0][1].Value {
+			actions = append(actions, "split")
 		}
 	}
 	return actions
@@ -239,33 +244,40 @@ func (g *Game) Hit() {
 	}
 
 	player := &g.Player
-	if player.Stati[0] != Playing {
+	if player.Stati[g.ActiveHand] != Playing {
 		return
 	}
 
-	player.Hands[0] = append(player.Hands[0], g.Deck[0])
+	player.Hands[g.ActiveHand] = append(player.Hands[g.ActiveHand], g.Deck[0])
 	g.Deck = g.Deck[1:]
-	player.Scores[0] = HandScore(player.Hands[0])
+	player.Scores[g.ActiveHand] = HandScore(player.Hands[g.ActiveHand])
 
-	if player.Scores[0] > 21 {
-		player.Stati[0] = Bust
-		g.determineWinner()
+	if player.Scores[g.ActiveHand] > 21 {
+		player.Stati[g.ActiveHand] = Bust
+		g.nextHandOrDealer()
 	}
 }
 
-// Stand ends the current player's turn.
+// Stand ends the current player's turn for the current hand.
 func (g *Game) Stand() {
 	if g.GameState != "playing" {
 		return
 	}
 
 	player := &g.Player
-	if player.Stati[0] != Playing {
+	if player.Stati[g.ActiveHand] != Playing {
 		return
 	}
 
-	player.Stati[0] = Stand
-	g.dealerTurn()
+	player.Stati[g.ActiveHand] = Stand
+	g.nextHandOrDealer()
+}
+
+func (g *Game) nextHandOrDealer() {
+	g.ActiveHand++
+	if g.ActiveHand >= len(g.Player.Hands) {
+		g.dealerTurn()
+	}
 }
 
 // DoubleDown doubles the player's bet, deals one more card, and ends the turn.
@@ -296,6 +308,34 @@ func (g *Game) DoubleDown() {
 	}
 }
 
+// Split splits the player's hand into two hands.
+func (g *Game) Split() {
+	if g.GameState != "playing" {
+		return
+	}
+	player := &g.Player
+	if len(player.Hands) != 1 || len(player.Hands[0]) != 2 || player.Hands[0][0].Value != player.Hands[0][1].Value {
+		// Can only split on a pair in a single hand
+		return
+	}
+	if g.PlayerChips < g.PlayerBet {
+		// Not enough chips to split
+		return
+	}
+
+	g.PlayerChips -= g.PlayerBet
+
+	// Create two new hands
+	hand1 := Hand{player.Hands[0][0], g.Deck[0]}
+	hand2 := Hand{player.Hands[0][1], g.Deck[1]}
+	g.Deck = g.Deck[2:]
+
+	player.Hands = []Hand{hand1, hand2}
+	player.Scores = []int{HandScore(hand1), HandScore(hand2)}
+	player.Stati = []PlayerStatus{Playing, Playing}
+	player.Bets = []int{g.PlayerBet, g.PlayerBet}
+}
+
 // dealerTurn plays the dealer's turn.
 func (g *Game) dealerTurn() {
 	// Dealer plays
@@ -319,25 +359,27 @@ func (g *Game) determineWinner() {
 	dealerScore := g.Dealer.Scores[0]
 	player := &g.Player
 
-	// If player has blackjack is handled in dealHand
+	for i := range player.Hands {
+		// If player has blackjack is handled in dealHand
 
-	// If player is bust
-	if player.Stati[0] == Bust {
-		player.Stati[0] = DealerWins
-	} else if g.Dealer.Stati[0] == Bust {
-		// If dealer is bust
-		player.Stati[0] = PlayerWins
-		g.PlayerChips += g.PlayerBet * 2
-	} else if player.Stati[0] == Stand {
-		// Compare scores
-		if player.Scores[0] > dealerScore {
-			player.Stati[0] = PlayerWins
-				g.PlayerChips += g.PlayerBet * 2
-		} else if player.Scores[0] < dealerScore {
-			player.Stati[0] = DealerWins
-		} else {
-			player.Stati[0] = Push
-			g.PlayerChips += g.PlayerBet
+		// If player is bust
+		if player.Stati[i] == Bust {
+			player.Stati[i] = DealerWins
+		} else if g.Dealer.Stati[0] == Bust {
+			// If dealer is bust
+			player.Stati[i] = PlayerWins
+			g.PlayerChips += player.Bets[i] * 2
+		} else if player.Stati[i] == Stand {
+			// Compare scores
+			if player.Scores[i] > dealerScore {
+				player.Stati[i] = PlayerWins
+				g.PlayerChips += player.Bets[i] * 2
+			} else if player.Scores[i] < dealerScore {
+				player.Stati[i] = DealerWins
+			} else {
+				player.Stati[i] = Push
+				g.PlayerChips += player.Bets[i]
+			}
 		}
 	}
 	g.GameState = "game_over"

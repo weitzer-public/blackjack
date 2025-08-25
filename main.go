@@ -22,6 +22,7 @@ func main() {
 	http.HandleFunc("/api/hit", hitHandler)
 	http.HandleFunc("/api/stand", standHandler)
 	http.HandleFunc("/api/doubledown", doubleDownHandler)
+	http.HandleFunc("/api/split", splitHandler)
 
 	log.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -68,5 +69,12 @@ func doubleDownHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	game.DoubleDown()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func splitHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	game.Split()
 	json.NewEncoder(w).Encode(game.Visible())
 }

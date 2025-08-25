@@ -11,6 +11,7 @@ const standBtn = document.getElementById("stand-btn");
 const betBtn = document.getElementById("bet-btn");
 const betAmountInput = document.getElementById("bet-amount");
 const doubleDownBtn = document.getElementById("double-down-btn");
+const splitBtn = document.getElementById("split-btn");
 
 const bettingControls = document.getElementById("betting-controls");
 const gameControls = document.getElementById("game-controls");
@@ -37,18 +38,37 @@ function renderGame(data) {
     }
 
 
-    // Render the player's hand
+    // Render the player's hands
     playerCardsEl.innerHTML = "";
-    if (data.Player && data.Player.Hands && data.Player.Hands[0]) {
-        for (const card of data.Player.Hands[0]) {
-            const cardEl = document.createElement("div");
-            cardEl.classList.add("card");
-            cardEl.textContent = getCardName(card);
-            playerCardsEl.appendChild(cardEl);
+    if (data.Player && data.Player.Hands) {
+        for (let i = 0; i < data.Player.Hands.length; i++) {
+            const hand = data.Player.Hands[i];
+            const handEl = document.createElement("div");
+            handEl.classList.add("hand");
+            if (i === data.ActiveHand) {
+                handEl.classList.add("active-hand");
+            }
+
+            const cardsEl = document.createElement("div");
+            cardsEl.classList.add("cards");
+            for (const card of hand) {
+                const cardEl = document.createElement("div");
+                cardEl.classList.add("card");
+                cardEl.textContent = getCardName(card);
+                cardsEl.appendChild(cardEl);
+            }
+            handEl.appendChild(cardsEl);
+
+            const scoreEl = document.createElement("p");
+            scoreEl.textContent = "Score: " + data.Player.Scores[i];
+            handEl.appendChild(scoreEl);
+
+            const statusEl = document.createElement("p");
+            statusEl.textContent = "Status: " + data.Player.Stati[i];
+            handEl.appendChild(statusEl);
+
+            playerCardsEl.appendChild(handEl);
         }
-        playerScoreEl.textContent = data.Player.Scores[0];
-    } else {
-        playerScoreEl.textContent = "";
     }
 
     playerChipsEl.textContent = data.PlayerChips;
@@ -88,6 +108,7 @@ function renderGame(data) {
     hitBtn.style.display = data.AvailableActions.includes("hit") ? "inline-block" : "none";
     standBtn.style.display = data.AvailableActions.includes("stand") ? "inline-block" : "none";
     doubleDownBtn.style.display = data.AvailableActions.includes("doubledown") ? "inline-block" : "none";
+    splitBtn.style.display = data.AvailableActions.includes("split") ? "inline-block" : "none";
     bettingControls.style.display = data.AvailableActions.includes("bet") ? "block" : "none";
 }
 
@@ -126,6 +147,14 @@ standBtn.addEventListener("click", function() {
 
 doubleDownBtn.addEventListener("click", function() {
     fetch("/api/doubledown")
+        .then(response => response.json())
+        .then(data => {
+            renderGame(data);
+        });
+});
+
+splitBtn.addEventListener("click", function() {
+    fetch("/api/split")
         .then(response => response.json())
         .then(data => {
             renderGame(data);
