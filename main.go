@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 )
 
@@ -17,6 +18,7 @@ func main() {
 	http.Handle("/", fs)
 
 	http.HandleFunc("/api/new_game", newGameHandler)
+	http.HandleFunc("/api/bet", betHandler)
 	http.HandleFunc("/api/hit", hitHandler)
 	http.HandleFunc("/api/stand", standHandler)
 
@@ -30,28 +32,33 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	game = NewGame()
-	game.NextTurn()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func betHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	amount, err := strconv.Atoi(r.URL.Query().Get("amount"))
+	if err != nil {
+		http.Error(w, "Invalid bet amount", http.StatusBadRequest)
+		return
+	}
+
+	game.PlaceBet(amount)
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if game.Players[game.Turn].IsHuman {
-		game.Hit()
-		if game.Players[game.Turn].Status == Bust {
-			game.NextTurn()
-		}
-	}
+	game.Hit()
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if game.Players[game.Turn].IsHuman {
-		game.Stand()
-		game.NextTurn()
-	}
+	game.Stand()
 	json.NewEncoder(w).Encode(game.Visible())
 }

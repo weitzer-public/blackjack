@@ -1,10 +1,18 @@
-const messageEl = document.getElementById("message-el");
+const messageBar = document.getElementById("message-bar");
 const dealerCardsEl = document.getElementById("dealer-cards");
 const dealerScoreEl = document.getElementById("dealer-score");
-const playersContainerEl = document.getElementById("players-container");
+const playerCardsEl = document.getElementById("player-cards");
+const playerScoreEl = document.getElementById("player-score");
+const playerChipsEl = document.getElementById("player-chips");
+
 const newGameBtn = document.getElementById("new-game-btn");
 const hitBtn = document.getElementById("hit-btn");
 const standBtn = document.getElementById("stand-btn");
+const betBtn = document.getElementById("bet-btn");
+const betAmountInput = document.getElementById("bet-amount");
+
+const bettingControls = document.getElementById("betting-controls");
+const gameControls = document.getElementById("game-controls");
 
 function getCardName(card) {
     const suits = ["♠", "♥", "♦", "♣"];
@@ -15,70 +23,66 @@ function getCardName(card) {
 function renderGame(data) {
     // Render the dealer's hand
     dealerCardsEl.innerHTML = "";
-    for (const card of data.Dealer.Hand) {
-        const cardEl = document.createElement("div");
-        cardEl.classList.add("card");
-        cardEl.textContent = getCardName(card);
-        dealerCardsEl.appendChild(cardEl);
-    }
-    dealerScoreEl.textContent = data.Dealer.Score;
-
-    // Render the players' hands
-    playersContainerEl.innerHTML = "";
-    for (const player of data.Players) {
-        const playerEl = document.createElement("div");
-        playerEl.classList.add("player");
-        if (player.IsHuman) {
-            playerEl.classList.add("human");
-        }
-
-        const playerNameEl = document.createElement("h3");
-        playerNameEl.textContent = player.IsHuman ? "You" : "Computer";
-        playerEl.appendChild(playerNameEl);
-
-        const cardsEl = document.createElement("div");
-        cardsEl.classList.add("cards");
-        for (const card of player.Hand) {
+    if (data.Dealer && data.Dealer.Hands && data.Dealer.Hands[0]) {
+        for (const card of data.Dealer.Hands[0]) {
             const cardEl = document.createElement("div");
             cardEl.classList.add("card");
             cardEl.textContent = getCardName(card);
-            cardsEl.appendChild(cardEl);
+            dealerCardsEl.appendChild(cardEl);
         }
-        playerEl.appendChild(cardsEl);
-
-        const scoreEl = document.createElement("p");
-        scoreEl.textContent = "Score: " + player.Score;
-        playerEl.appendChild(scoreEl);
-
-        const statusEl = document.createElement("p");
-        statusEl.textContent = "Status: " + player.Status;
-        playerEl.appendChild(statusEl);
-
-        playersContainerEl.appendChild(playerEl);
+        dealerScoreEl.textContent = data.Dealer.Scores[0];
+    } else {
+        dealerScoreEl.textContent = "";
     }
 
-    // Display the game message
-    switch (data.State) {
+
+    // Render the player's hand
+    playerCardsEl.innerHTML = "";
+    if (data.Player && data.Player.Hands && data.Player.Hands[0]) {
+        for (const card of data.Player.Hands[0]) {
+            const cardEl = document.createElement("div");
+            cardEl.classList.add("card");
+            cardEl.textContent = getCardName(card);
+            playerCardsEl.appendChild(cardEl);
+        }
+        playerScoreEl.textContent = data.Player.Scores[0];
+    } else {
+        playerScoreEl.textContent = "";
+    }
+
+    playerChipsEl.textContent = data.PlayerChips;
+
+    // Update UI based on game state
+    switch (data.GameState) {
+        case "betting":
+            messageBar.textContent = "Place your bet!";
+            bettingControls.style.display = "block";
+            gameControls.style.display = "none";
+            break;
         case "playing":
-            messageEl.textContent = "Your turn!";
+            messageBar.textContent = "Your turn!";
+            bettingControls.style.display = "none";
+            gameControls.style.display = "block";
             break;
         case "game_over":
-            const humanPlayer = data.Players.find(p => p.IsHuman);
-            switch (humanPlayer.Status) {
+            bettingControls.style.display = "block"; // Allow betting for next game
+            gameControls.style.display = "none";
+            const playerStatus = data.Player.Stati[0];
+            switch (playerStatus) {
                 case "player_wins":
-                    messageEl.textContent = "You win!";
+                    messageBar.textContent = "You win!";
                     break;
                 case "dealer_wins":
-                    messageEl.textContent = "Dealer wins!";
+                    messageBar.textContent = "Dealer wins!";
                     break;
                 case "push":
-                    messageEl.textContent = "It's a push!";
+                    messageBar.textContent = "It's a push!";
                     break;
                 case "bust":
-                    messageEl.textContent = "Bust!";
+                    messageBar.textContent = "Bust!";
                     break;
                 default:
-                    messageEl.textContent = "Game over!";
+                    messageBar.textContent = "Game over! Place your bet for the next round.";
             }
             break;
     }
@@ -86,6 +90,15 @@ function renderGame(data) {
 
 newGameBtn.addEventListener("click", function() {
     fetch("/api/new_game")
+        .then(response => response.json())
+        .then(data => {
+            renderGame(data);
+        });
+});
+
+betBtn.addEventListener("click", function() {
+    const amount = betAmountInput.value;
+    fetch(`/api/bet?amount=${amount}`)
         .then(response => response.json())
         .then(data => {
             renderGame(data);
@@ -107,3 +120,10 @@ standBtn.addEventListener("click", function() {
             renderGame(data);
         });
 });
+
+// Initial game load
+fetch("/api/new_game")
+    .then(response => response.json())
+    .then(data => {
+        renderGame(data);
+    });

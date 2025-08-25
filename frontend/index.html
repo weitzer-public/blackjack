@@ -3,25 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blackjack</title>
+    <title>Blackjack - Las Vegas Experience</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Blackjack</h1>
     <div id="table">
-        <div id="dealer-container">
+        <div id="dealer-area">
             <h2>Dealer</h2>
             <div id="dealer-cards" class="cards"></div>
             <p>Score: <span id="dealer-score"></span></p>
         </div>
-        <div id="players-container"></div>
+
+        <div id="player-area">
+            <h2>Player</h2>
+            <div id="player-cards" class="cards"></div>
+            <p>Score: <span id="player-score"></span></p>
+        </div>
+
+        <div id="message-bar"></div>
     </div>
+
     <div id="controls">
+        <div id="betting-controls">
+            <input type="number" id="bet-amount" value="10" min="1">
+            <button id="bet-btn">Bet</button>
+        </div>
+        <div id="game-controls" style="display: none;">
+            <button id="hit-btn">Hit</button>
+            <button id="stand-btn">Stand</button>
+            <button id="double-down-btn">Double Down</button>
+            <button id="split-btn">Split</button>
+        </div>
         <button id="new-game-btn">New Game</button>
-        <button id="hit-btn">Hit</button>
-        <button id="stand-btn">Stand</button>
     </div>
-    <p id="message-el"></p>
+
+    <div id="chip-display">
+        <p>Chips: <span id="player-chips">1000</span></p>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
