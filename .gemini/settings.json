@@ -1,5 +1,4 @@
 {
-  "debug": false,
   "maxSessionTurns": 50,
   "telemetry": {
     "enabled": true,

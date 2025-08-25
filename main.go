@@ -1,9 +1,11 @@
+
 package main
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 )
 
@@ -17,8 +19,12 @@ func main() {
 	http.Handle("/", fs)
 
 	http.HandleFunc("/api/new_game", newGameHandler)
+	http.HandleFunc("/api/bet", betHandler)
 	http.HandleFunc("/api/hit", hitHandler)
 	http.HandleFunc("/api/stand", standHandler)
+	http.HandleFunc("/api/doubledown", doubleDownHandler)
+	http.HandleFunc("/api/split", splitHandler)
+	http.HandleFunc("/api/game_state", gameStateHandler)
 
 	log.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -30,28 +36,53 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	game = NewGame()
-	game.NextTurn()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func betHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	amount, err := strconv.Atoi(r.URL.Query().Get("amount"))
+	if err != nil {
+		http.Error(w, "Invalid bet amount", http.StatusBadRequest)
+		return
+	}
+
+	game.PlaceBet(amount)
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func hitHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if game.Players[game.Turn].IsHuman {
-		game.Hit()
-		if game.Players[game.Turn].Status == Bust {
-			game.NextTurn()
-		}
-	}
+	game.Hit()
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
 func standHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if game.Players[game.Turn].IsHuman {
-		game.Stand()
-		game.NextTurn()
-	}
+	game.Stand()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func doubleDownHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	game.DoubleDown()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func splitHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	game.Split()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func gameStateHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	json.NewEncoder(w).Encode(game.Visible())
 }

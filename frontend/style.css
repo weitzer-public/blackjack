@@ -1,74 +1,54 @@
 body {
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    background-image: url("images/table.png");
-    background-size: cover;
-    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
     color: white;
-    font-weight: bold;
-}
-
-h1 {
-    color: goldenrod;
-}
-
-#message-el {
-    font-style: italic;
+    text-align: center;
 }
 
 #table {
+    background-color: #006400;
+    border: 10px solid #8B4513;
+    border-radius: 150px;
+    width: 90%;
+    max-width: 1000px;
+    height: 500px;
+    margin: 20px auto;
     position: relative;
-    width: 800px;
-    height: 400px;
-    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-#dealer-container {
+#dealer-area, #player-area {
     position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    border: 2px solid white;
-    border-radius: 5px;
-    padding: 10px;
-    min-width: 150px;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
-#players-container {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    justify-content: center;
+#dealer-area {
+    top: 0;
 }
 
-.player {
-    border: 2px solid white;
-    border-radius: 5px;
-    padding: 10px;
-    margin: 10px;
-    min-width: 150px;
-}
-
-.player.human {
-    border-color: goldenrod;
+#player-area {
+    bottom: 0;
 }
 
 .cards {
     display: flex;
     justify-content: center;
+    min-height: 80px;
 }
 
 .card {
     background-color: white;
     color: black;
-    width: 40px;
-    height: 60px;
-    line-height: 60px;
+    width: 60px;
+    height: 90px;
     border-radius: 5px;
     margin: 5px;
-    font-size: 24px;
+    font-size: 2em;
+    line-height: 90px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    position: relative;
 }
 
 #controls {
@@ -76,17 +56,59 @@ h1 {
 }
 
 button {
-    color: #016f32;
-    width: 150px;
-    background: goldenrod;
-    padding: 5px 0;
+    background-color: goldenrod;
+    color: #222;
+    border: 2px solid #DAA520;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 1em;
     font-weight: bold;
-    border: none;
-    border-radius: 2px;
-    margin: 2px 0;
     cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s, transform 0.1s;
 }
 
 button:hover {
-    background: #c5b358;
+    background-color: #c5b358;
+}
+
+button:active {
+    transform: translateY(2px);
+}
+
+input[type="number"] {
+    width: 80px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 2px solid #ccc;
+    font-size: 1em;
+    text-align: center;
+}
+
+#chip-display {
+    font-size: 1.5em;
+    margin-top: 20px;
+}
+
+#message-bar {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px #000;
+}
+
+.hand {
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px;
+    display: inline-block;
+}
+
+.active-hand {
+    border-color: goldenrod;
 }
