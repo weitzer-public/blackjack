@@ -131,7 +131,10 @@ func (g *Game) getAvailableActions() []string {
 	}
 	if g.GameState == "playing" {
 		actions = append(actions, "hit", "stand")
-		// Add logic for double down and split
+		// Player can double down on the first two cards
+		if len(g.Player.Hands[0]) == 2 {
+			actions = append(actions, "doubledown")
+		}
 	}
 	return actions
 }
@@ -263,6 +266,34 @@ func (g *Game) Stand() {
 
 	player.Stati[0] = Stand
 	g.dealerTurn()
+}
+
+// DoubleDown doubles the player's bet, deals one more card, and ends the turn.
+func (g *Game) DoubleDown() {
+	if g.GameState != "playing" {
+		return
+	}
+	if g.PlayerChips < g.PlayerBet {
+		// Not enough chips to double down
+		return
+	}
+
+	g.PlayerChips -= g.PlayerBet
+	g.Player.Bets[0] *= 2
+
+	// Deal one more card
+	player := &g.Player
+	player.Hands[0] = append(player.Hands[0], g.Deck[0])
+	g.Deck = g.Deck[1:]
+	player.Scores[0] = HandScore(player.Hands[0])
+
+	if player.Scores[0] > 21 {
+		player.Stati[0] = Bust
+		g.determineWinner()
+	} else {
+		player.Stati[0] = Stand
+		g.dealerTurn()
+	}
 }
 
 // dealerTurn plays the dealer's turn.
