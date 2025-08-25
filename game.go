@@ -1,8 +1,10 @@
+
 package main
 
 import (
 	"encoding/json"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -10,6 +12,8 @@ const (
 	NumCardsDeal = 2
 	Blackjack    = 21
 	DealerStand  = 17
+	NumAIPlayers = 4
+	AIPlayerBet  = 10
 )
 
 // Card represents a playing card with a suit and value.
@@ -76,31 +80,34 @@ func (s PlayerStatus) MarshalJSON() ([]byte, error) {
 
 // Player represents a player in the game.
 type Player struct {
+	Name    string
 	Hands   []Hand
 	Scores  []int
 	Stati   []PlayerStatus
 	Bets    []int // A bet for each hand
-	IsHuman bool
+	IsAI    bool
+	IsTurn  bool
+	Result  string // e.g., "Bust", "Blackjack", "Win", "Loss", "Push"
+	Chips   int
 }
 
 // Game represents the state of a blackjack game.
 type Game struct {
-	Deck        Deck
-	Player      Player
-	Dealer      Player
-	GameState   string // e.g., "betting", "playing", "game_over"
-	PlayerBet   int
-	PlayerChips int
-	ActiveHand  int
+	Deck               Deck
+	Players            []Player
+	Dealer             Player
+	GameState          string // e.g., "betting", "playing", "game_over"
+	PlayerChips        int
+	ActiveHand         int
+	CurrentPlayerIndex int
 }
 
 // VisibleGame is the version of the Game struct that is sent to the client.
 type VisibleGame struct {
-	Player           Player   `json:"Player"`
+	Players          []Player `json:"Players"`
 	Dealer           Player   `json:"Dealer"`
 	GameState        string   `json:"GameState"`
 	PlayerChips      int      `json:"PlayerChips"`
-	PlayerBet        int      `json:"PlayerBet"`
 	AvailableActions []string `json:"AvailableActions"`
 }
 
@@ -116,11 +123,10 @@ func (g *Game) Visible() VisibleGame {
 	}
 
 	return VisibleGame{
-		Player:           g.Player,
+		Players:          g.Players,
 		Dealer:           visibleDealer,
 		GameState:        g.GameState,
 		PlayerChips:      g.PlayerChips,
-		PlayerBet:        g.PlayerBet,
 		AvailableActions: g.getAvailableActions(),
 	}
 }
@@ -130,14 +136,15 @@ func (g *Game) getAvailableActions() []string {
 	if g.GameState == "betting" {
 		actions = append(actions, "bet")
 	}
-	if g.GameState == "playing" {
+	if g.GameState == "playing" && g.CurrentPlayerIndex < len(g.Players) && !g.Players[g.CurrentPlayerIndex].IsAI {
+		player := g.Players[g.CurrentPlayerIndex]
 		actions = append(actions, "hit", "stand")
 		// Player can double down on the first two cards
-		if len(g.Player.Hands[0]) == 2 {
+		if len(player.Hands[0]) == 2 {
 			actions = append(actions, "doubledown")
 		}
 		// Player can split on a pair
-		if len(g.Player.Hands) == 1 && len(g.Player.Hands[0]) == 2 && g.Player.Hands[0][0].Value == g.Player.Hands[0][1].Value {
+		if len(player.Hands) == 1 && len(player.Hands[0]) == 2 && player.Hands[0][0].Value == player.Hands[0][1].Value {
 			actions = append(actions, "split")
 		}
 	}
@@ -150,6 +157,11 @@ func NewGame() Game {
 		PlayerChips: 1000, // Starting chips
 		GameState:   "betting",
 	}
+	game.Players = make([]Player, NumAIPlayers+1)
+	game.Players[0] = Player{Name: "Player", IsAI: false, Chips: game.PlayerChips}
+	for i := 1; i <= NumAIPlayers; i++ {
+		game.Players[i] = Player{Name: "AI " + strconv.Itoa(i), IsAI: true, Chips: 1000}
+	}
 	return game
 }
 
@@ -158,13 +170,20 @@ func (g *Game) PlaceBet(amount int) {
 	if g.GameState != "betting" {
 		return
 	}
-	if amount <= 0 || amount > g.PlayerChips {
+	if amount <= 0 || amount > g.Players[0].Chips {
 		// Invalid bet amount
 		return
 	}
 
-	g.PlayerChips -= amount
-	g.PlayerBet = amount
+	g.Players[0].Chips -= amount
+	g.Players[0].Bets = []int{amount}
+
+	// AI players place their bets
+	for i := 1; i < len(g.Players); i++ {
+		g.Players[i].Bets = []int{AIPlayerBet}
+		g.Players[i].Chips -= AIPlayerBet
+	}
+
 	g.dealHand()
 }
 
@@ -172,41 +191,40 @@ func (g *Game) dealHand() {
 	deck := NewDeck()
 	deck.Shuffle()
 
-	playerHand := Hand{deck[0], deck[1]}
-	dealerHand := Hand{deck[2], deck[3]}
-
-	g.Player = Player{
-		Hands:   []Hand{playerHand},
-		Scores:  []int{HandScore(playerHand)},
-		Stati:   []PlayerStatus{Playing},
-		Bets:    []int{g.PlayerBet},
-		IsHuman: true,
+	// Deal to players
+	for i := range g.Players {
+		hand := Hand{deck[i*2], deck[i*2+1]}
+		g.Players[i].Hands = []Hand{hand}
+		g.Players[i].Scores = []int{HandScore(hand)}
+		g.Players[i].Stati = []PlayerStatus{Playing}
 	}
 
+	// Deal to dealer
+	dealerHand := Hand{deck[len(g.Players)*2], deck[len(g.Players)*2+1]}
 	g.Dealer = Player{
+		Name:   "Dealer",
 		Hands:  []Hand{dealerHand},
 		Scores: []int{HandScore(dealerHand)},
 		Stati:  []PlayerStatus{Playing},
 	}
 
-	g.Deck = deck[4:]
+	g.Deck = deck[len(g.Players)*2+2:]
 	g.GameState = "playing"
+	g.CurrentPlayerIndex = 0
 
-	// Check for blackjack
-	if g.Player.Scores[0] == Blackjack {
-		g.Player.Stati[0] = BlackjackWin
-		if g.Dealer.Scores[0] == Blackjack {
-			g.Dealer.Stati[0] = BlackjackWin
-			g.Player.Stati[0] = Push
-			g.PlayerChips += g.PlayerBet // Push, return bet
-			g.GameState = "game_over"
-		} else {
-			g.PlayerChips += g.PlayerBet + (g.PlayerBet*3)/2 // Blackjack pays 3:2
-			g.GameState = "game_over"
+	// Check for blackjacks
+	for i := range g.Players {
+		if g.Players[i].Scores[0] == Blackjack {
+			g.Players[i].Stati[0] = BlackjackWin
 		}
-	} else if g.Dealer.Scores[0] == Blackjack {
+	}
+	if g.Dealer.Scores[0] == Blackjack {
 		g.Dealer.Stati[0] = BlackjackWin
-		g.GameState = "game_over"
+	}
+
+	// If human player has blackjack, their turn is over
+	if g.Players[0].Stati[0] == BlackjackWin {
+		g.nextPlayer()
 	}
 }
 
@@ -243,7 +261,7 @@ func (g *Game) Hit() {
 		return
 	}
 
-	player := &g.Player
+	player := &g.Players[g.CurrentPlayerIndex]
 	if player.Stati[g.ActiveHand] != Playing {
 		return
 	}
@@ -254,7 +272,7 @@ func (g *Game) Hit() {
 
 	if player.Scores[g.ActiveHand] > 21 {
 		player.Stati[g.ActiveHand] = Bust
-		g.nextHandOrDealer()
+		g.nextPlayer()
 	}
 }
 
@@ -264,19 +282,34 @@ func (g *Game) Stand() {
 		return
 	}
 
-	player := &g.Player
+	player := &g.Players[g.CurrentPlayerIndex]
 	if player.Stati[g.ActiveHand] != Playing {
 		return
 	}
 
 	player.Stati[g.ActiveHand] = Stand
-	g.nextHandOrDealer()
+	g.nextPlayer()
 }
 
-func (g *Game) nextHandOrDealer() {
-	g.ActiveHand++
-	if g.ActiveHand >= len(g.Player.Hands) {
+func (g *Game) nextPlayer() {
+	g.ActiveHand = 0
+	g.CurrentPlayerIndex++
+	if g.CurrentPlayerIndex >= len(g.Players) {
 		g.dealerTurn()
+	} else {
+		if g.Players[g.CurrentPlayerIndex].IsAI {
+			g.aiTurn()
+		}
+	}
+}
+
+func (g *Game) aiTurn() {
+	player := &g.Players[g.CurrentPlayerIndex]
+	for player.Scores[0] < DealerStand {
+		g.Hit()
+	}
+	if player.Stati[0] == Playing {
+		g.Stand()
 	}
 }
 
@@ -285,27 +318,26 @@ func (g *Game) DoubleDown() {
 	if g.GameState != "playing" {
 		return
 	}
-	if g.PlayerChips < g.PlayerBet {
+	player := &g.Players[g.CurrentPlayerIndex]
+	if player.Chips < player.Bets[0] {
 		// Not enough chips to double down
 		return
 	}
 
-	g.PlayerChips -= g.PlayerBet
-	g.Player.Bets[0] *= 2
+	player.Chips -= player.Bets[0]
+	player.Bets[0] *= 2
 
 	// Deal one more card
-	player := &g.Player
 	player.Hands[0] = append(player.Hands[0], g.Deck[0])
 	g.Deck = g.Deck[1:]
 	player.Scores[0] = HandScore(player.Hands[0])
 
 	if player.Scores[0] > 21 {
 		player.Stati[0] = Bust
-		g.determineWinner()
 	} else {
 		player.Stati[0] = Stand
-		g.dealerTurn()
 	}
+	g.nextPlayer()
 }
 
 // Split splits the player's hand into two hands.
@@ -313,17 +345,17 @@ func (g *Game) Split() {
 	if g.GameState != "playing" {
 		return
 	}
-	player := &g.Player
+	player := &g.Players[g.CurrentPlayerIndex]
 	if len(player.Hands) != 1 || len(player.Hands[0]) != 2 || player.Hands[0][0].Value != player.Hands[0][1].Value {
 		// Can only split on a pair in a single hand
 		return
 	}
-	if g.PlayerChips < g.PlayerBet {
+	if player.Chips < player.Bets[0] {
 		// Not enough chips to split
 		return
 	}
 
-	g.PlayerChips -= g.PlayerBet
+	player.Chips -= player.Bets[0]
 
 	// Create two new hands
 	hand1 := Hand{player.Hands[0][0], g.Deck[0]}
@@ -333,7 +365,7 @@ func (g *Game) Split() {
 	player.Hands = []Hand{hand1, hand2}
 	player.Scores = []int{HandScore(hand1), HandScore(hand2)}
 	player.Stati = []PlayerStatus{Playing, Playing}
-	player.Bets = []int{g.PlayerBet, g.PlayerBet}
+	player.Bets = []int{player.Bets[0], player.Bets[0]}
 }
 
 // dealerTurn plays the dealer's turn.
@@ -357,30 +389,35 @@ func (g *Game) dealerTurn() {
 // determineWinner determines the winner of the game.
 func (g *Game) determineWinner() {
 	dealerScore := g.Dealer.Scores[0]
-	player := &g.Player
 
-	for i := range player.Hands {
-		// If player has blackjack is handled in dealHand
-
-		// If player is bust
-		if player.Stati[i] == Bust {
-			player.Stati[i] = DealerWins
-		} else if g.Dealer.Stati[0] == Bust {
-			// If dealer is bust
-			player.Stati[i] = PlayerWins
-			g.PlayerChips += player.Bets[i] * 2
-		} else if player.Stati[i] == Stand {
-			// Compare scores
-			if player.Scores[i] > dealerScore {
-				player.Stati[i] = PlayerWins
-				g.PlayerChips += player.Bets[i] * 2
-			} else if player.Scores[i] < dealerScore {
-				player.Stati[i] = DealerWins
-			} else {
-				player.Stati[i] = Push
-				g.PlayerChips += player.Bets[i]
+	for i := range g.Players {
+		player := &g.Players[i]
+		for j := range player.Hands {
+			if player.Stati[j] == BlackjackWin {
+				if g.Dealer.Stati[0] == BlackjackWin {
+					player.Stati[j] = Push
+					player.Chips += player.Bets[j]
+				} else {
+					player.Chips += player.Bets[j] + (player.Bets[j]*3)/2
+				}
+			} else if player.Stati[j] == Bust {
+				player.Stati[j] = DealerWins
+			} else if g.Dealer.Stati[0] == Bust {
+				player.Stati[j] = PlayerWins
+				player.Chips += player.Bets[j] * 2
+			} else if player.Stati[j] == Stand {
+				if player.Scores[j] > dealerScore {
+					player.Stati[j] = PlayerWins
+					player.Chips += player.Bets[j] * 2
+				} else if player.Scores[j] < dealerScore {
+					player.Stati[j] = DealerWins
+				} else {
+					player.Stati[j] = Push
+					player.Chips += player.Bets[j]
+				}
 			}
 		}
 	}
+	g.PlayerChips = g.Players[0].Chips
 	g.GameState = "game_over"
 }

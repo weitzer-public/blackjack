@@ -1,8 +1,8 @@
+
 const messageBar = document.getElementById("message-bar");
 const dealerCardsEl = document.getElementById("dealer-cards");
 const dealerScoreEl = document.getElementById("dealer-score");
-const playerCardsEl = document.getElementById("player-cards");
-const playerScoreEl = document.getElementById("player-score");
+const playersAreaEl = document.getElementById("players-area");
 const playerChipsEl = document.getElementById("player-chips");
 
 const newGameBtn = document.getElementById("new-game-btn");
@@ -37,41 +37,60 @@ function renderGame(data) {
         dealerScoreEl.textContent = "";
     }
 
-
-    // Render the player's hands
-    playerCardsEl.innerHTML = "";
-    if (data.Player && data.Player.Hands) {
-        for (let i = 0; i < data.Player.Hands.length; i++) {
-            const hand = data.Player.Hands[i];
-            const handEl = document.createElement("div");
-            handEl.classList.add("hand");
-            if (i === data.ActiveHand) {
-                handEl.classList.add("active-hand");
+    // Render the players' hands
+    playersAreaEl.innerHTML = "";
+    if (data.Players) {
+        for (let i = 0; i < data.Players.length; i++) {
+            const player = data.Players[i];
+            const playerEl = document.createElement("div");
+            playerEl.classList.add("player-area");
+            if (player.IsTurn) {
+                playerEl.classList.add("active-player");
             }
 
-            const cardsEl = document.createElement("div");
-            cardsEl.classList.add("cards");
-            for (const card of hand) {
-                const cardEl = document.createElement("div");
-                cardEl.classList.add("card");
-                cardEl.textContent = getCardName(card);
-                cardsEl.appendChild(cardEl);
+            const playerNameEl = document.createElement("h2");
+            playerNameEl.textContent = player.Name;
+            playerEl.appendChild(playerNameEl);
+
+            const playerCardsEl = document.createElement("div");
+            playerCardsEl.classList.add("cards");
+            if (player.Hands) {
+                for (let j = 0; j < player.Hands.length; j++) {
+                    const hand = player.Hands[j];
+                    const handEl = document.createElement("div");
+                    handEl.classList.add("hand");
+
+                    const cardsEl = document.createElement("div");
+                    cardsEl.classList.add("cards");
+                    for (const card of hand) {
+                        const cardEl = document.createElement("div");
+                        cardEl.classList.add("card");
+                        cardEl.textContent = getCardName(card);
+                        cardsEl.appendChild(cardEl);
+                    }
+                    handEl.appendChild(cardsEl);
+
+                    const scoreEl = document.createElement("p");
+                    scoreEl.textContent = "Score: " + player.Scores[j];
+                    handEl.appendChild(scoreEl);
+
+                    const statusEl = document.createElement("p");
+                    statusEl.textContent = "Status: " + player.Stati[j];
+                    handEl.appendChild(statusEl);
+
+                    playerCardsEl.appendChild(handEl);
+                }
             }
-            handEl.appendChild(cardsEl);
+            playerEl.appendChild(playerCardsEl);
 
-            const scoreEl = document.createElement("p");
-            scoreEl.textContent = "Score: " + data.Player.Scores[i];
-            handEl.appendChild(scoreEl);
+            if (!player.IsAI) {
+                const playerChipsDisplayEl = document.getElementById("player-chips");
+                playerChipsDisplayEl.textContent = player.Chips;
+            }
 
-            const statusEl = document.createElement("p");
-            statusEl.textContent = "Status: " + data.Player.Stati[i];
-            handEl.appendChild(statusEl);
-
-            playerCardsEl.appendChild(handEl);
+            playersAreaEl.appendChild(playerEl);
         }
     }
-
-    playerChipsEl.textContent = data.PlayerChips;
 
     // Update UI based on game state
     if (data.GameState === "betting") {
@@ -85,23 +104,7 @@ function renderGame(data) {
     } else if (data.GameState === "game_over") {
         bettingControls.style.display = "block"; // Allow betting for next game
         gameControls.style.display = "none";
-        const playerStatus = data.Player.Stati[0];
-        switch (playerStatus) {
-            case "player_wins":
-                messageBar.textContent = "You win!";
-                break;
-            case "dealer_wins":
-                messageBar.textContent = "Dealer wins!";
-                break;
-            case "push":
-                messageBar.textContent = "It's a push!";
-                break;
-            case "bust":
-                messageBar.textContent = "Bust!";
-                break;
-            default:
-                messageBar.textContent = "Game over! Place your bet for the next round.";
-        }
+        messageBar.textContent = "Game over! Place your bet for the next round.";
     }
 
     // Show/hide action buttons
@@ -148,7 +151,7 @@ newGameBtn.addEventListener("click", function() {
 
 betBtn.addEventListener("click", function() {
     const amount = betAmountInput.value;
-    performAction(`/api/bet?amount=${amount}`, 'GET');
+    performAction(`/api/bet?amount=${amount}`, 'POST');
 });
 
 hitBtn.addEventListener("click", function() {
@@ -168,4 +171,4 @@ splitBtn.addEventListener("click", function() {
 });
 
 // Initial game load
-performAction("/api/new_game", 'POST');
+performAction("/api/game_state", 'GET');

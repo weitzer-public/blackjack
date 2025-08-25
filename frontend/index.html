@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,17 +8,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="table">
+    <div id="game-container">
         <div id="dealer-area">
             <h2>Dealer</h2>
             <div id="dealer-cards" class="cards"></div>
             <p>Score: <span id="dealer-score"></span></p>
         </div>
 
-        <div id="player-area">
-            <h2>Player</h2>
-            <div id="player-cards" class="cards"></div>
-            <p>Score: <span id="player-score"></span></p>
+        <div id="players-area">
+            <!-- Players will be dynamically added here -->
         </div>
 
         <div id="message-bar"></div>
@@ -38,7 +37,7 @@
     </div>
 
     <div id="chip-display">
-        <p>Chips: <span id="player-chips">1000</span></p>
+        <p>Your Chips: <span id="player-chips">1000</span></p>
     </div>
 
     <script src="script.js"></script>
