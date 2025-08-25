@@ -152,40 +152,71 @@ func TestDetermineWinner(t *testing.T) {
 }
 
 func TestBlackjackPayout(t *testing.T) {
-	game := NewGame()
-	game.PlaceBet(100)
+	// Test case for an even bet
+	gameEven := NewGame()
+	gameEven.PlaceBet(100)
 
 	// Force a blackjack for the player
-	game.Player.Hands[0] = Hand{{Value: 1}, {Value: 10}}
-	game.Player.Scores[0] = HandScore(game.Player.Hands[0])
+	gameEven.Player.Hands[0] = Hand{{Value: 1}, {Value: 10}}
+	gameEven.Player.Scores[0] = HandScore(gameEven.Player.Hands[0])
 
 	// Make sure dealer doesn't have blackjack
-	game.Dealer.Hands[0] = Hand{{Value: 2}, {Value: 10}}
-	game.Dealer.Scores[0] = HandScore(game.Dealer.Hands[0])
+	gameEven.Dealer.Hands[0] = Hand{{Value: 2}, {Value: 10}}
+	gameEven.Dealer.Scores[0] = HandScore(gameEven.Dealer.Hands[0])
 
 	// Check for blackjack
-	if game.Player.Scores[0] == Blackjack {
-		game.Player.Stati[0] = BlackjackWin
-		if game.Dealer.Scores[0] == Blackjack {
-			game.Dealer.Stati[0] = BlackjackWin
-			game.Player.Stati[0] = Push
-			game.PlayerChips += game.PlayerBet // Push, return bet
-			game.GameState = "game_over"
+	if gameEven.Player.Scores[0] == Blackjack {
+		gameEven.Player.Stati[0] = BlackjackWin
+		if gameEven.Dealer.Scores[0] == Blackjack {
+			gameEven.Dealer.Stati[0] = BlackjackWin
+			gameEven.Player.Stati[0] = Push
+			gameEven.PlayerChips += gameEven.PlayerBet // Push, return bet
+			gameEven.GameState = "game_over"
 		} else {
-			game.PlayerChips += game.PlayerBet + (game.PlayerBet*3)/2 // Blackjack pays 3:2
-			game.GameState = "game_over"
+			gameEven.PlayerChips += gameEven.PlayerBet + int(float64(gameEven.PlayerBet)*1.5) // Blackjack pays 3:2
+			gameEven.GameState = "game_over"
 		}
-	} else if game.Dealer.Scores[0] == Blackjack {
-		game.Dealer.Stati[0] = BlackjackWin
-		game.GameState = "game_over"
+	} else if gameEven.Dealer.Scores[0] == Blackjack {
+		gameEven.Dealer.Stati[0] = BlackjackWin
+		gameEven.GameState = "game_over"
 	}
 
-	// Player wins with blackjack, payout should be 3:2
-	// Initial chips: 1000, Bet: 100. Chips after bet: 900.
-	// Payout: 100 (original bet) + 100 * 3 / 2 = 150. Total payout: 250
-	// Expected chips: 900 + 250 = 1150
-	expectedChips := 1150
-	if game.PlayerChips != expectedChips {
-		t.Errorf("Expected player chips to be %d after blackjack, but got %d", expectedChips, game.PlayerChips)
+	expectedChipsEven := 1150
+	if gameEven.PlayerChips != expectedChipsEven {
+		t.Errorf("Expected player chips to be %d after blackjack, but got %d", expectedChipsEven, gameEven.PlayerChips)
+	}
+
+	// Test case for an odd bet
+	gameOdd := NewGame()
+	gameOdd.PlaceBet(15)
+
+	// Force a blackjack for the player
+	gameOdd.Player.Hands[0] = Hand{{Value: 1}, {Value: 10}}
+	gameOdd.Player.Scores[0] = HandScore(gameOdd.Player.Hands[0])
+
+	// Make sure dealer doesn't have blackjack
+	gameOdd.Dealer.Hands[0] = Hand{{Value: 2}, {Value: 10}}
+	gameOdd.Dealer.Scores[0] = HandScore(gameOdd.Dealer.Hands[0])
+
+	// Check for blackjack
+	if gameOdd.Player.Scores[0] == Blackjack {
+		gameOdd.Player.Stati[0] = BlackjackWin
+		if gameOdd.Dealer.Scores[0] == Blackjack {
+			gameOdd.Dealer.Stati[0] = BlackjackWin
+			gameOdd.Player.Stati[0] = Push
+			gameOdd.PlayerChips += gameOdd.PlayerBet // Push, return bet
+			gameOdd.GameState = "game_over"
+		} else {
+			gameOdd.PlayerChips += gameOdd.PlayerBet + int(float64(gameOdd.PlayerBet)*1.5) // Blackjack pays 3:2
+			gameOdd.GameState = "game_over"
+		}
+	} else if gameOdd.Dealer.Scores[0] == Blackjack {
+		gameOdd.Dealer.Stati[0] = BlackjackWin
+		gameOdd.GameState = "game_over"
+	}
+
+	expectedChipsOdd := 1022
+	if gameOdd.PlayerChips != expectedChipsOdd {
+		t.Errorf("Expected player chips to be %d after blackjack with odd bet, but got %d", expectedChipsOdd, gameOdd.PlayerChips)
 	}
 }
