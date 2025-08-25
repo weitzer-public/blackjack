@@ -3,6 +3,7 @@ const dealerCardsEl = document.getElementById("dealer-cards");
 const dealerScoreEl = document.getElementById("dealer-score");
 const playerCardsEl = document.getElementById("player-cards");
 const playerScoreEl = document.getElementById("player-score");
+const playersArea = document.getElementById("players-area");
 const playerChipsEl = document.getElementById("player-chips");
 
 const newGameBtn = document.getElementById("new-game-btn");
@@ -37,41 +38,18 @@ function renderGame(data) {
         dealerScoreEl.textContent = "";
     }
 
-
-    // Render the player's hands
-    playerCardsEl.innerHTML = "";
-    if (data.Player && data.Player.Hands) {
-        for (let i = 0; i < data.Player.Hands.length; i++) {
-            const hand = data.Player.Hands[i];
-            const handEl = document.createElement("div");
-            handEl.classList.add("hand");
-            if (i === data.ActiveHand) {
-                handEl.classList.add("active-hand");
+    // Render AI players
+    playersArea.innerHTML = "";
+    if(data.Players) {
+        for (const player of data.Players) {
+            if (player.IsHuman) {
+                renderPlayer(player, true);
+            } else {
+                renderPlayer(player, false);
             }
-
-            const cardsEl = document.createElement("div");
-            cardsEl.classList.add("cards");
-            for (const card of hand) {
-                const cardEl = document.createElement("div");
-                cardEl.classList.add("card");
-                cardEl.textContent = getCardName(card);
-                cardsEl.appendChild(cardEl);
-            }
-            handEl.appendChild(cardsEl);
-
-            const scoreEl = document.createElement("p");
-            scoreEl.textContent = "Score: " + data.Player.Scores[i];
-            handEl.appendChild(scoreEl);
-
-            const statusEl = document.createElement("p");
-            statusEl.textContent = "Status: " + data.Player.Stati[i];
-            handEl.appendChild(statusEl);
-
-            playerCardsEl.appendChild(handEl);
         }
     }
 
-    playerChipsEl.textContent = data.PlayerChips;
 
     // Update UI based on game state
     if (data.GameState === "betting") {
@@ -85,23 +63,7 @@ function renderGame(data) {
     } else if (data.GameState === "game_over") {
         bettingControls.style.display = "block"; // Allow betting for next game
         gameControls.style.display = "none";
-        const playerStatus = data.Player.Stati[0];
-        switch (playerStatus) {
-            case "player_wins":
-                messageBar.textContent = "You win!";
-                break;
-            case "dealer_wins":
-                messageBar.textContent = "Dealer wins!";
-                break;
-            case "push":
-                messageBar.textContent = "It's a push!";
-                break;
-            case "bust":
-                messageBar.textContent = "Bust!";
-                break;
-            default:
-                messageBar.textContent = "Game over! Place your bet for the next round.";
-        }
+        messageBar.textContent = "Game over! Place your bet for the next round.";
     }
 
     // Show/hide action buttons
@@ -110,6 +72,53 @@ function renderGame(data) {
     doubleDownBtn.style.display = data.AvailableActions.includes("doubledown") ? "inline-block" : "none";
     splitBtn.style.display = data.AvailableActions.includes("split") ? "inline-block" : "none";
     bettingControls.style.display = data.AvailableActions.includes("bet") ? "block" : "none";
+}
+
+function renderPlayer(player, isHuman) {
+    let playerEl;
+    if(isHuman) {
+        playerEl = document.getElementById("player-area");
+        playerChipsEl.textContent = player.Chips;
+    } else {
+        playerEl = document.createElement("div");
+        playerEl.classList.add("player");
+        playersArea.appendChild(playerEl);
+    }
+
+    const nameEl = document.createElement("h2");
+    nameEl.textContent = player.Name;
+    playerEl.appendChild(nameEl);
+
+    const cardsEl = document.createElement("div");
+    cardsEl.classList.add("cards");
+    if (player.Hands) {
+        for (let i = 0; i < player.Hands.length; i++) {
+            const hand = player.Hands[i];
+            const handEl = document.createElement("div");
+            handEl.classList.add("hand");
+
+            const handCardsEl = document.createElement("div");
+            handCardsEl.classList.add("cards");
+            for (const card of hand) {
+                const cardEl = document.createElement("div");
+                cardEl.classList.add("card");
+                cardEl.textContent = getCardName(card);
+                handCardsEl.appendChild(cardEl);
+            }
+            handEl.appendChild(handCardsEl);
+
+            const scoreEl = document.createElement("p");
+            scoreEl.textContent = "Score: " + player.Scores[i];
+            handEl.appendChild(scoreEl);
+
+            const statusEl = document.createElement("p");
+            statusEl.textContent = "Status: " + player.Stati[i];
+            handEl.appendChild(statusEl);
+
+            cardsEl.appendChild(handEl);
+        }
+    }
+    playerEl.appendChild(cardsEl);
 }
 
 function performAction(url, method = 'GET', data = null) {
@@ -147,8 +156,8 @@ newGameBtn.addEventListener("click", function() {
 });
 
 betBtn.addEventListener("click", function() {
-    const amount = betAmountInput.value;
-    performAction(`/api/bet?amount=${amount}`, 'GET');
+    const amount = parseInt(betAmountInput.value, 10);
+    performAction('/api/bet', 'POST', { amount });
 });
 
 hitBtn.addEventListener("click", function() {
@@ -168,4 +177,4 @@ splitBtn.addEventListener("click", function() {
 });
 
 // Initial game load
-performAction("/api/new_game", 'POST');
+performAction("/api/game", 'GET');

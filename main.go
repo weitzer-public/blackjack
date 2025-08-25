@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 )
 
@@ -23,6 +22,7 @@ func main() {
 	http.HandleFunc("/api/stand", standHandler)
 	http.HandleFunc("/api/doubledown", doubleDownHandler)
 	http.HandleFunc("/api/split", splitHandler)
+	http.HandleFunc("/api/game", gameHandler)
 
 	log.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -37,17 +37,21 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
+type BetRequest struct {
+	Amount int `json:"amount"`
+}
+
 func betHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	amount, err := strconv.Atoi(r.URL.Query().Get("amount"))
-	if err != nil {
-		http.Error(w, "Invalid bet amount", http.StatusBadRequest)
+	var req BetRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	game.PlaceBet(amount)
+	game.PlaceBet(req.Amount)
 	json.NewEncoder(w).Encode(game.Visible())
 }
 
@@ -76,5 +80,11 @@ func splitHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	game.Split()
+	json.NewEncoder(w).Encode(game.Visible())
+}
+
+func gameHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	json.NewEncoder(w).Encode(game.Visible())
 }

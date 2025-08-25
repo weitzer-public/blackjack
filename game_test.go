@@ -33,8 +33,12 @@ func TestHandScore(t *testing.T) {
 func TestNewGame(t *testing.T) {
 	game := NewGame()
 
-	if game.PlayerChips != 1000 {
-		t.Errorf("Expected player to have 1000 chips, but got %d", game.PlayerChips)
+	if len(game.Players) != 5 {
+		t.Errorf("Expected 5 players, but got %d", len(game.Players))
+	}
+
+	if game.Players[0].Chips != 1000 {
+		t.Errorf("Expected player to have 1000 chips, but got %d", game.Players[0].Chips)
 	}
 
 	if game.GameState != "betting" {
@@ -46,20 +50,20 @@ func TestPlaceBet(t *testing.T) {
 	game := NewGame()
 	game.PlaceBet(100)
 
-	if game.PlayerChips != 900 {
-		t.Errorf("Expected player to have 900 chips, but got %d", game.PlayerChips)
+	if game.HumanPlayer.Chips != 900 {
+		t.Errorf("Expected player to have 900 chips, but got %d", game.HumanPlayer.Chips)
 	}
 
-	if game.PlayerBet != 100 {
-		t.Errorf("Expected player bet to be 100, but got %d", game.PlayerBet)
+	if game.HumanPlayer.Bets[0] != 100 {
+		t.Errorf("Expected player bet to be 100, but got %d", game.HumanPlayer.Bets[0])
 	}
 
 	if game.GameState != "playing" {
 		t.Errorf("Expected game state to be 'playing', but got %s", game.GameState)
 	}
 
-	if len(game.Player.Hands[0]) != 2 {
-		t.Errorf("Expected player to have 2 cards, but got %d", len(game.Player.Hands[0]))
+	if len(game.HumanPlayer.Hands[0]) != 2 {
+		t.Errorf("Expected player to have 2 cards, but got %d", len(game.HumanPlayer.Hands[0]))
 	}
 
 	if len(game.Dealer.Hands[0]) != 2 {
@@ -72,8 +76,8 @@ func TestHit(t *testing.T) {
 	game.PlaceBet(100)
 	game.Hit()
 
-	if len(game.Player.Hands[0]) != 3 {
-		t.Errorf("Expected player to have 3 cards, but got %d", len(game.Player.Hands[0]))
+	if len(game.HumanPlayer.Hands[0]) != 3 {
+		t.Errorf("Expected player to have 3 cards, but got %d", len(game.HumanPlayer.Hands[0]))
 	}
 }
 
@@ -87,13 +91,28 @@ func TestStand(t *testing.T) {
 	}
 }
 
-func TestDealerTurn(t *testing.T) {
+func TestAITurn(t *testing.T) {
 	game := NewGame()
 	game.PlaceBet(100)
-	game.dealerTurn()
 
-	if game.Dealer.Scores[0] < 17 {
-		t.Errorf("Expected dealer score to be at least 17, but got %d", game.Dealer.Scores[0])
+	// Find an AI player
+	var aiPlayer *Player
+	for i := range game.Players {
+		if !game.Players[i].IsHuman {
+			aiPlayer = &game.Players[i]
+			break
+		}
+	}
+
+	// Force AI player to have a low score
+	aiPlayer.Hands[0] = Hand{{Value: 2}, {Value: 3}}
+	aiPlayer.Scores[0] = HandScore(aiPlayer.Hands[0])
+
+	game.ActivePlayer = 1 // Set active player to the AI
+	game.playAITurn()
+
+	if aiPlayer.Stati[0] != Stand && aiPlayer.Stati[0] != Bust {
+		t.Errorf("Expected AI player to stand or bust, but got %s", aiPlayer.Stati[0])
 	}
 }
 
@@ -101,91 +120,51 @@ func TestDetermineWinner(t *testing.T) {
 	testCases := []struct {
 		player      Player
 		dealer      Player
-		playerChips int
 		expectedPlayerStatus PlayerStatus
 		expectedPlayerChips int
 	}{
 		{
-			player:      Player{Hands: []Hand{{}}, Scores: []int{20}, Stati: []PlayerStatus{Stand}, Bets: []int{100}},
+			player:      Player{Name: "Player 1", Hands: []Hand{{}}, Scores: []int{20}, Stati: []PlayerStatus{Stand}, Bets: []int{100}, IsHuman: true, Chips: 900},
 			dealer:      Player{Scores: []int{19}, Stati: []PlayerStatus{Stand}},
-			playerChips: 900,
 			expectedPlayerStatus: PlayerWins,
 			expectedPlayerChips: 1100,
 		},
 		{
-			player:      Player{Hands: []Hand{{}}, Scores: []int{18}, Stati: []PlayerStatus{Stand}, Bets: []int{100}},
+			player:      Player{Name: "Player 1", Hands: []Hand{{}}, Scores: []int{18}, Stati: []PlayerStatus{Stand}, Bets: []int{100}, IsHuman: true, Chips: 900},
 			dealer:      Player{Scores: []int{19}, Stati: []PlayerStatus{Stand}},
-			playerChips: 900,
 			expectedPlayerStatus: DealerWins,
 			expectedPlayerChips: 900,
 		},
 		{
-			player:      Player{Hands: []Hand{{}}, Scores: []int{19}, Stati: []PlayerStatus{Stand}, Bets: []int{100}},
+			player:      Player{Name: "Player 1", Hands: []Hand{{}}, Scores: []int{19}, Stati: []PlayerStatus{Stand}, Bets: []int{100}, IsHuman: true, Chips: 900},
 			dealer:      Player{Scores: []int{19}, Stati: []PlayerStatus{Stand}},
-			playerChips: 900,
 			expectedPlayerStatus: Push,
 			expectedPlayerChips: 1000,
 		},
 		{
-			player:      Player{Hands: []Hand{{}}, Scores: []int{22}, Stati: []PlayerStatus{Bust}, Bets: []int{100}},
+			player:      Player{Name: "Player 1", Hands: []Hand{{}}, Scores: []int{22}, Stati: []PlayerStatus{Bust}, Bets: []int{100}, IsHuman: true, Chips: 900},
 			dealer:      Player{Scores: []int{19}, Stati: []PlayerStatus{Stand}},
-			playerChips: 900,
 			expectedPlayerStatus: DealerWins,
 			expectedPlayerChips: 900,
+		},
+		{
+			player:      Player{Name: "Player 1", Hands: []Hand{{}}, Scores: []int{21}, Stati: []PlayerStatus{BlackjackWin}, Bets: []int{100}, IsHuman: true, Chips: 900},
+			dealer:      Player{Scores: []int{19}, Stati: []PlayerStatus{Stand}},
+			expectedPlayerStatus: BlackjackWin,
+			expectedPlayerChips: 1150,
 		},
 	}
 
 	for _, tc := range testCases {
 		game := NewGame()
-		game.Player = tc.player
+		game.Players[0] = tc.player
 		game.Dealer = tc.dealer
-		game.PlayerChips = tc.playerChips
-		game.PlayerBet = 100
 		game.determineWinner()
-		if game.Player.Stati[0] != tc.expectedPlayerStatus {
-			t.Errorf("Expected player status to be %s, but got %s", tc.expectedPlayerStatus, game.Player.Stati[0])
+		if game.Players[0].Stati[0] != tc.expectedPlayerStatus {
+			t.Errorf("Expected player status to be %s, but got %s", tc.expectedPlayerStatus, game.Players[0].Stati[0])
 		}
-		if game.PlayerChips != tc.expectedPlayerChips {
-			t.Errorf("Expected player chips to be %d, but got %d", tc.expectedPlayerChips, game.PlayerChips)
+		if game.Players[0].Chips != tc.expectedPlayerChips {
+			t.Errorf("Expected player chips to be %d, but got %d", tc.expectedPlayerChips, game.Players[0].Chips)
 		}
-	}
-}
-
-func TestBlackjackPayout(t *testing.T) {
-	game := NewGame()
-	game.PlaceBet(100)
-
-	// Force a blackjack for the player
-	game.Player.Hands[0] = Hand{{Value: 1}, {Value: 10}}
-	game.Player.Scores[0] = HandScore(game.Player.Hands[0])
-
-	// Make sure dealer doesn't have blackjack
-	game.Dealer.Hands[0] = Hand{{Value: 2}, {Value: 10}}
-	game.Dealer.Scores[0] = HandScore(game.Dealer.Hands[0])
-
-	// Check for blackjack
-	if game.Player.Scores[0] == Blackjack {
-		game.Player.Stati[0] = BlackjackWin
-		if game.Dealer.Scores[0] == Blackjack {
-			game.Dealer.Stati[0] = BlackjackWin
-			game.Player.Stati[0] = Push
-			game.PlayerChips += game.PlayerBet // Push, return bet
-			game.GameState = "game_over"
-		} else {
-			game.PlayerChips += game.PlayerBet + (game.PlayerBet*3)/2 // Blackjack pays 3:2
-			game.GameState = "game_over"
-		}
-	} else if game.Dealer.Scores[0] == Blackjack {
-		game.Dealer.Stati[0] = BlackjackWin
-		game.GameState = "game_over"
-	}
-
-	// Player wins with blackjack, payout should be 3:2
-	// Initial chips: 1000, Bet: 100. Chips after bet: 900.
-	// Payout: 100 (original bet) + 100 * 3 / 2 = 150. Total payout: 250
-	// Expected chips: 900 + 250 = 1150
-	expectedChips := 1150
-	if game.PlayerChips != expectedChips {
-		t.Errorf("Expected player chips to be %d after blackjack, but got %d", expectedChips, game.PlayerChips)
 	}
 }
